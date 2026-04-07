@@ -1,0 +1,116 @@
+jenkins:
+  systemMessage: "🤖 GitHub Copilot CLI + Jenkins Demo - Ready to use!"
+  numExecutors: 2
+  mode: NORMAL
+  scmCheckoutRetryCount: 3
+  
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+          name: "Administrator"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - string:
+              scope: GLOBAL
+              id: "gh-token"
+              secret: "${GH_TOKEN}"
+              description: "GitHub Token for Copilot CLI"
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+  ansiColorBuildWrapper:
+    globalColorMapName: "xterm"
+
+jobs:
+  - script: >
+      folder('copilot-demos') {
+        displayName('🤖 Copilot CLI Demos')
+        description('Pipelines demonstrating GitHub Copilot CLI integration')
+      }
+  
+  - script: >
+      pipelineJob('copilot-demos/code-review') {
+        displayName('📝 Code Review with Copilot')
+        description('Automated code review using GitHub Copilot CLI')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('/workspace')
+                }
+                branches('*/main')
+              }
+            }
+            scriptPath('pipelines/code-review.jenkinsfile')
+          }
+        }
+      }
+  
+  - script: >
+      pipelineJob('copilot-demos/docs-generator') {
+        displayName('📚 Documentation Generator')
+        description('Generate documentation using GitHub Copilot CLI')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('/workspace')
+                }
+                branches('*/main')
+              }
+            }
+            scriptPath('pipelines/docs-generator.jenkinsfile')
+          }
+        }
+      }
+  
+  - script: >
+      pipelineJob('copilot-demos/code-analysis') {
+        displayName('🔍 Code Analysis')
+        description('Analyze code and get suggestions using GitHub Copilot CLI')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('/workspace')
+                }
+                branches('*/main')
+              }
+            }
+            scriptPath('pipelines/code-analysis.jenkinsfile')
+          }
+        }
+      }
+  
+  - script: >
+      pipelineJob('main-pipeline') {
+        displayName('🚀 Main Pipeline - All Demos')
+        description('Run all Copilot CLI demonstrations')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('/workspace')
+                }
+                branches('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+          }
+        }
+      }

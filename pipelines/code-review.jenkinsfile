@@ -1,0 +1,105 @@
+pipeline {
+    agent any
+    
+    options {
+        ansiColor('xterm')
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+    }
+    
+    environment {
+        GH_TOKEN = credentials('gh-token')
+    }
+    
+    stages {
+        stage('🔧 Setup') {
+            steps {
+                echo '📦 Checking GitHub Copilot CLI installation...'
+                sh '''
+                    if ! gh extension list | grep -q "gh-copilot"; then
+                        echo "Installing gh-copilot extension..."
+                        gh extension install github/gh-copilot || true
+                    fi
+                    echo "✅ Copilot CLI is ready"
+                '''
+            }
+        }
+        
+        stage('📂 Prepare Files') {
+            steps {
+                echo '🔍 Collecting source files for review...'
+                sh '''
+                    # List all TypeScript files to review
+                    find src -name "*.ts" -type f | head -20 > files_to_review.txt
+                    echo "Files to review:"
+                    cat files_to_review.txt
+                '''
+            }
+        }
+        
+        stage('📝 Code Review with Copilot') {
+            steps {
+                echo '🤖 Running Copilot code review...'
+                sh '''
+                    mkdir -p reports
+                    
+                    # Review each file
+                    echo "# Code Review Report" > reports/code-review.md
+                    echo "" >> reports/code-review.md
+                    echo "Generated: $(date)" >> reports/code-review.md
+                    echo "" >> reports/code-review.md
+                    
+                    for file in $(cat files_to_review.txt); do
+                        echo "## Reviewing: $file" >> reports/code-review.md
+                        echo "" >> reports/code-review.md
+                        
+                        # Use Copilot to explain and review the code
+                        echo "Reviewing $file..."
+                        
+                        # Get file content and ask Copilot for review
+                        content=$(cat "$file")
+                        
+                        # Ask Copilot to explain the code
+                        echo "### Code Explanation" >> reports/code-review.md
+                        echo '```' >> reports/code-review.md
+                        gh copilot explain "Review this TypeScript code for best practices, potential bugs, and improvements: $(head -50 $file)" 2>&1 | head -100 >> reports/code-review.md || echo "Review completed" >> reports/code-review.md
+                        echo '```' >> reports/code-review.md
+                        echo "" >> reports/code-review.md
+                        
+                        echo "---" >> reports/code-review.md
+                        echo "" >> reports/code-review.md
+                    done
+                    
+                    echo "✅ Code review complete!"
+                '''
+            }
+        }
+        
+        stage('📊 Generate Summary') {
+            steps {
+                echo '📋 Generating review summary...'
+                sh '''
+                    echo "" >> reports/code-review.md
+                    echo "## Summary" >> reports/code-review.md
+                    echo "" >> reports/code-review.md
+                    echo "- Files reviewed: $(wc -l < files_to_review.txt)" >> reports/code-review.md
+                    echo "- Review date: $(date)" >> reports/code-review.md
+                    echo "- Jenkins build: #${BUILD_NUMBER}" >> reports/code-review.md
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '📁 Archiving review report...'
+            archiveArtifacts artifacts: 'reports/*.md', allowEmptyArchive: true
+        }
+        success {
+            echo '✅ Code review pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Code review pipeline failed!'
+        }
+    }
+}

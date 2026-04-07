@@ -1,0 +1,29 @@
+# Node.js
+node_modules/
+dist/
+coverage/
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jenkins
+jenkins_home/
+*.war
+
+# Build artifacts
+build/
+tmp/

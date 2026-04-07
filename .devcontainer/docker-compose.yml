@@ -1,0 +1,39 @@
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.devcontainer
+    volumes:
+      - ..:/workspace:cached
+      - jenkins_home:/var/jenkins_home
+    environment:
+      - GH_TOKEN=${GH_TOKEN}
+    depends_on:
+      - jenkins
+    networks:
+      - jenkins-net
+
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./jenkins-config:/var/jenkins_config:ro
+      - ..:/workspace:ro
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - CASC_JENKINS_CONFIG=/var/jenkins_config/casc.yaml
+      - GH_TOKEN=${GH_TOKEN}
+    networks:
+      - jenkins-net
+
+volumes:
+  jenkins_home:
+
+networks:
+  jenkins-net:
+    driver: bridge

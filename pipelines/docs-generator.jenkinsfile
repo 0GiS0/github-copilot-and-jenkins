@@ -1,0 +1,152 @@
+pipeline {
+    agent any
+    
+    options {
+        ansiColor('xterm')
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+    }
+    
+    environment {
+        GH_TOKEN = credentials('gh-token')
+    }
+    
+    parameters {
+        choice(
+            name: 'DOC_TYPE',
+            choices: ['README', 'API', 'ALL'],
+            description: 'Type of documentation to generate'
+        )
+    }
+    
+    stages {
+        stage('🔧 Setup') {
+            steps {
+                echo '📦 Checking GitHub Copilot CLI installation...'
+                sh '''
+                    if ! gh extension list | grep -q "gh-copilot"; then
+                        echo "Installing gh-copilot extension..."
+                        gh extension install github/gh-copilot || true
+                    fi
+                    echo "✅ Copilot CLI is ready"
+                '''
+            }
+        }
+        
+        stage('📂 Analyze Project') {
+            steps {
+                echo '🔍 Analyzing project structure...'
+                sh '''
+                    mkdir -p docs
+                    
+                    # Collect project information
+                    echo "Project Structure:" > project_info.txt
+                    find . -type f -name "*.ts" -o -name "*.js" | grep -v node_modules | head -30 >> project_info.txt
+                    echo "" >> project_info.txt
+                    
+                    echo "Package Info:" >> project_info.txt
+                    cat package.json >> project_info.txt 2>/dev/null || echo "No package.json found"
+                    
+                    echo "Project info collected"
+                '''
+            }
+        }
+        
+        stage('📚 Generate README') {
+            when {
+                expression { params.DOC_TYPE == 'README' || params.DOC_TYPE == 'ALL' }
+            }
+            steps {
+                echo '🤖 Generating README with Copilot...'
+                sh '''
+                    echo "Generating README documentation..."
+                    
+                    # Extract key information from project
+                    PROJECT_NAME=$(cat package.json | jq -r '.name' 2>/dev/null || echo "Project")
+                    PROJECT_DESC=$(cat package.json | jq -r '.description' 2>/dev/null || echo "A demo project")
+                    
+                    # Ask Copilot to help generate documentation
+                    echo "# Generated Documentation" > docs/GENERATED_README.md
+                    echo "" >> docs/GENERATED_README.md
+                    echo "## Project: $PROJECT_NAME" >> docs/GENERATED_README.md
+                    echo "" >> docs/GENERATED_README.md
+                    echo "$PROJECT_DESC" >> docs/GENERATED_README.md
+                    echo "" >> docs/GENERATED_README.md
+                    
+                    # Use Copilot to generate installation instructions
+                    echo "### Installation" >> docs/GENERATED_README.md
+                    echo "" >> docs/GENERATED_README.md
+                    gh copilot explain "Generate npm installation instructions for a TypeScript project" 2>&1 | head -30 >> docs/GENERATED_README.md || {
+                        echo '```bash' >> docs/GENERATED_README.md
+                        echo 'npm install' >> docs/GENERATED_README.md
+                        echo 'npm run build' >> docs/GENERATED_README.md
+                        echo '```' >> docs/GENERATED_README.md
+                    }
+                    echo "" >> docs/GENERATED_README.md
+                    
+                    # Use Copilot to explain project usage
+                    echo "### Usage" >> docs/GENERATED_README.md
+                    echo "" >> docs/GENERATED_README.md
+                    gh copilot explain "How to run a TypeScript Node.js project" 2>&1 | head -30 >> docs/GENERATED_README.md || {
+                        echo '```bash' >> docs/GENERATED_README.md
+                        echo 'npm run dev' >> docs/GENERATED_README.md
+                        echo '```' >> docs/GENERATED_README.md
+                    }
+                    
+                    echo "✅ README generated"
+                '''
+            }
+        }
+        
+        stage('📖 Generate API Docs') {
+            when {
+                expression { params.DOC_TYPE == 'API' || params.DOC_TYPE == 'ALL' }
+            }
+            steps {
+                echo '🤖 Generating API documentation with Copilot...'
+                sh '''
+                    echo "Generating API documentation..."
+                    
+                    echo "# API Documentation" > docs/API.md
+                    echo "" >> docs/API.md
+                    echo "Generated: $(date)" >> docs/API.md
+                    echo "" >> docs/API.md
+                    
+                    # Document each TypeScript file
+                    for file in $(find src -name "*.ts" -type f | grep -v test | head -10); do
+                        echo "## $(basename $file)" >> docs/API.md
+                        echo "" >> docs/API.md
+                        echo "### Functions" >> docs/API.md
+                        echo "" >> docs/API.md
+                        
+                        # Extract function signatures and ask Copilot to document
+                        grep -E "^export (async )?function" "$file" | while read -r func; do
+                            echo "#### $func" >> docs/API.md
+                            echo "" >> docs/API.md
+                            gh copilot explain "Document this TypeScript function: $func" 2>&1 | head -20 >> docs/API.md || echo "Function documentation" >> docs/API.md
+                            echo "" >> docs/API.md
+                        done
+                        
+                        echo "---" >> docs/API.md
+                        echo "" >> docs/API.md
+                    done
+                    
+                    echo "✅ API documentation generated"
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo '📁 Archiving documentation...'
+            archiveArtifacts artifacts: 'docs/*.md', allowEmptyArchive: true
+        }
+        success {
+            echo '✅ Documentation generation completed successfully!'
+        }
+        failure {
+            echo '❌ Documentation generation failed!'
+        }
+    }
+}
