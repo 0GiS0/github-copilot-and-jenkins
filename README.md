@@ -61,7 +61,7 @@
 
 ---
 
-## �� Requisitos Previos
+## 📋 Requisitos Previos
 
 - **[Docker Desktop](https://www.docker.com/products/docker-desktop)** instalado y en ejecución (mínimo 4 GB de RAM asignados)
 - **[Visual Studio Code](https://code.visualstudio.com/)** con la extensión [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
@@ -223,7 +223,7 @@ Ejecuta una revisión automática del código usando Copilot CLI:
 - Genera sugerencias de mejoras y buenas prácticas
 - Crea un reporte en Markdown como artefacto de Jenkins
 
-### �� Documentation Generator (`copilot-demos/docs-generator`)
+### 📚 Documentation Generator (`copilot-demos/docs-generator`)
 
 Genera documentación automáticamente con IA:
 
