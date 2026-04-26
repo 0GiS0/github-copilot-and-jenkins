@@ -9,3 +9,4 @@ pipeline-stage-view
 ansicolor
 timestamper
 ws-cleanup
+htmlpublisher
