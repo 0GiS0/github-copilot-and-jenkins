@@ -221,16 +221,26 @@ def render_inline(text: str) -> str:
                 result.append(f'<code>{escape(text[index + 1:end])}</code>')
                 index = end + 1
                 continue
+            result.append('`')
+            index += 1
+            continue
         if text.startswith('**', index):
             end = text.find('**', index + 2)
             if end != -1:
                 result.append(f'<strong>{render_inline(text[index + 2:end])}</strong>')
                 index = end + 2
                 continue
+            result.append('**')
+            index += 2
+            continue
         next_code = text.find('`', index)
         next_bold = text.find('**', index)
         candidates = [position for position in (next_code, next_bold) if position != -1]
         next_marker = min(candidates) if candidates else len(text)
+        if next_marker == index:
+            result.append(escape(text[index]))
+            index += 1
+            continue
         result.append(escape(text[index:next_marker]))
         index = next_marker
     return ''.join(result)
