@@ -309,7 +309,7 @@ def render_markdown(source: str) -> str:
             output.append(f'<h3>{render_inline(stripped[4:])}</h3>')
         elif stripped.startswith('## '):
             close_section()
-            output.append(f'<details class="report-section" open><summary>{render_inline(stripped[3:])}</summary><div class="section-body">')
+            output.append(f'<details class="report-section"><summary>{render_inline(stripped[3:])}</summary><div class="section-body">')
             in_section = True
         elif stripped.startswith('# '):
             output.append(f'<h1>{render_inline(stripped[2:])}</h1>')
