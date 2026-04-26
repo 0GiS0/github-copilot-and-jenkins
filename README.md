@@ -1,168 +1,161 @@
-# 🤖 GitHub Copilot CLI + Jenkins Integration Demo
+# 🤖 GitHub Copilot + Jenkins: CLI Integration y Chat Plugin
 
-[![Jenkins](https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](https://www.jenkins.io/)
-[![GitHub Copilot](https://img.shields.io/badge/GitHub%20Copilot-000000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/features/copilot)
-[![DevContainer](https://img.shields.io/badge/DevContainer-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://containers.dev/)
+<div align="center">
 
-Repositorio de ejemplo que demuestra cómo integrar **GitHub Copilot CLI** dentro de **Jenkins** usando Dev Containers para una configuración sencilla y reproducible.
+[![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UC140iBrEZbOtvxWsJ-Tb0lQ?style=for-the-badge&logo=youtube&logoColor=white&color=red)](https://www.youtube.com/c/GiselaTorres?sub_confirmation=1) [![GitHub followers](https://img.shields.io/github/followers/0GiS0?style=for-the-badge&logo=github&logoColor=white)](https://github.com/0GiS0) [![LinkedIn Follow](https://img.shields.io/badge/LinkedIn-Follow-blue?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/giselatorresbuitrago/) [![X Follow](https://img.shields.io/badge/X-Follow-black?style=for-the-badge&logo=x&logoColor=white)](https://twitter.com/0GiS0)
 
-## 🎯 ¿Qué incluye este proyecto?
+</div>
 
-- **Dev Container** preconfigurado con Jenkins y todas las dependencias
-- **Jenkins Configuration as Code (JCasC)** para setup automático
-- **3 pipelines de demostración** usando Copilot CLI:
-  - 📝 Code Review automático
-  - 📚 Generación de documentación
-  - 🔍 Análisis de código y sugerencias
-- **Proyecto Node.js/TypeScript** de ejemplo
+---
 
-## 📋 Requisitos Previos
+¡Hola developer 👋🏻! Este repositorio muestra cómo integrar **GitHub Copilot** con **Jenkins** de dos formas: usando la **GitHub Copilot CLI** en tus pipelines para automatizar code reviews, generación de documentación y análisis de código; y a través de un **plugin de Jenkins** que añade un chat interactivo con GitHub Copilot directamente en la interfaz de Jenkins.
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) instalado
-- [Visual Studio Code](https://code.visualstudio.com/) con la extensión [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
-- Token de GitHub con acceso a Copilot (`GH_TOKEN`)
+<a href="https://youtu.be/VIDEO_ID">
+ <img src="https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg" alt="GitHub Copilot + Jenkins: CLI Integration y Chat Plugin" width="100%" />
+</a>
 
-## 🚀 Inicio Rápido
+---
 
-### 1. Configurar el Token de GitHub
+## 📑 Tabla de Contenidos
 
-Necesitas un token de GitHub con permisos para usar Copilot CLI y para que Jenkins pueda descargar el contenido del repositorio privado de prueba:
+- [✨ Características](#-características)
+- [🛠️ Tecnologías](#️-tecnologías-utilizadas)
+- [📋 Requisitos Previos](#-requisitos-previos)
+- [🚀 Instalación](#-instalación)
+- [💻 Uso](#-uso)
+- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
+- [🔧 Pipelines Disponibles](#-pipelines-disponibles)
+- [🔌 Plugin Copilot Chat para Jenkins](#-plugin-copilot-chat-para-jenkins)
+- [🔒 Seguridad](#-seguridad)
+- [🐛 Troubleshooting](#-troubleshooting)
+- [📚 Recursos](#-recursos)
+- [🌐 Sígueme](#-sígueme-en-mis-redes-sociales)
 
-1. Ve a [GitHub Settings > Developer Settings > Personal Access Tokens](https://github.com/settings/tokens)
-2. Crea un nuevo token con estos permisos:
-    - Fine-grained PAT: acceso al repositorio de prueba, permiso `Contents: Read` y permiso `Copilot Requests`
-    - Classic PAT: scope `repo` y acceso a GitHub Copilot CLI en tu cuenta u organización
-3. Configura la variable de entorno:
+---
+
+## ✨ Características
+
+- 🤖 **GitHub Copilot CLI en pipelines** — Ejecuta análisis de código con IA directamente desde Jenkins
+- 💬 **Plugin Copilot Chat** — Chat interactivo con GitHub Copilot integrado en la UI de Jenkins
+- 🔐 **Autenticación OAuth Device Flow** — Login seguro con GitHub sin exponer credenciales
+- 📝 **Code Review automático** — Revisiones de código generadas por IA en cada pipeline
+- 📚 **Generación de documentación** — READMEs y docs de API creados automáticamente con Copilot
+- 🔍 **Análisis de código** — Métricas de complejidad, sugerencias de seguridad y mejoras
+- 🐳 **Dev Container preconfigurado** — Entorno listo para usar con Jenkins y todas las dependencias
+- ⚙️ **Jenkins as Code (JCasC)** — Configuración automática y reproducible de Jenkins
+- 🔒 **Gestión segura de credenciales** — Tokens de GitHub protegidos mediante Jenkins Credentials
+
+---
+
+## 🛠️ Tecnologías Utilizadas
+
+- **[Jenkins](https://www.jenkins.io/)** — Servidor de integración y entrega continua (CI/CD)
+- **[GitHub Copilot CLI](https://docs.github.com/en/copilot/github-copilot-in-the-cli)** — Binario `copilot` para análisis de código con IA en terminal
+- **[GitHub Copilot SDK for Java](https://github.com/github/copilot-sdk-java)** — SDK oficial para integrar Copilot en aplicaciones Java
+- **[Node.js / TypeScript](https://www.typescriptlang.org/)** — Proyecto de ejemplo para demostrar los pipelines
+- **[Java 17](https://openjdk.org/)** — Lenguaje principal del plugin de Jenkins
+- **[Maven](https://maven.apache.org/)** — Gestión de dependencias y build del plugin
+- **[Docker / Dev Containers](https://containers.dev/)** — Entorno de desarrollo reproducible
+- **[Jenkins Configuration as Code (JCasC)](https://www.jenkins.io/projects/jcasc/)** — Configuración declarativa de Jenkins
+- **[Jest](https://jestjs.io/)** — Testing del proyecto TypeScript de ejemplo
+
+---
+
+## �� Requisitos Previos
+
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop)** instalado y en ejecución (mínimo 4 GB de RAM asignados)
+- **[Visual Studio Code](https://code.visualstudio.com/)** con la extensión [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- **Token de GitHub** (`GH_TOKEN`) con los siguientes permisos:
+  - *Fine-grained PAT*: acceso al repositorio de prueba + permiso `Contents: Read` + permiso `Copilot Requests`
+  - *Classic PAT*: scope `repo` + acceso a GitHub Copilot en tu cuenta u organización
+- **Suscripción activa a GitHub Copilot** (individual o de organización)
+- **Java 17+** y **Maven 3.9+** si quieres compilar el plugin fuera del Dev Container
+
+---
+
+## 🚀 Instalación
+
+### Paso 1: Clonar el repositorio
 
 ```bash
-# En tu terminal (macOS/Linux)
+git clone https://github.com/0GiS0/github-copilot-and-jenkins.git
+cd github-copilot-and-jenkins
+```
+
+### Paso 2: Configurar el token de GitHub
+
+```bash
+# macOS / Linux
 export GH_TOKEN="tu_token_aqui"
 
-# En Windows PowerShell
+# Windows PowerShell
 $env:GH_TOKEN="tu_token_aqui"
 ```
 
-El Dev Container sincroniza automáticamente esta variable con la credencial `gh-token` de Jenkins al arrancar. Si `GH_TOKEN` no está definido pero `gh auth token` está disponible dentro del contenedor, el script usará ese token de GitHub CLI. Si cambias el token con el contenedor ya abierto, puedes relanzar la sincronización desde la terminal integrada:
+> **Nota:** El Dev Container sincroniza automáticamente esta variable con las credenciales de Jenkins al arrancar. Si el token cambia con el contenedor ya abierto, ejecuta:
+> ```bash
+> scripts/sync-jenkins-gh-token.sh
+> ```
 
-```bash
-scripts/sync-jenkins-gh-token.sh
-```
+### Paso 3: Abrir el Dev Container
 
-### 2. Abrir el Dev Container
-
-1. Clona este repositorio:
-   ```bash
-   git clone https://github.com/tu-usuario/github-copilot-jenkins-demo.git
-   cd github-copilot-jenkins-demo
-   ```
-
-2. Abre VS Code en el directorio:
+1. Abre VS Code en el directorio del repositorio:
    ```bash
    code .
    ```
+2. Cuando VS Code detecte el Dev Container, haz clic en **"Reopen in Container"**
+3. Espera a que Docker construya y levante los contenedores (~5 minutos la primera vez)
 
-3. Cuando VS Code detecte el Dev Container, haz clic en **"Reopen in Container"**
+### Paso 4: Acceder a Jenkins
 
-4. Espera a que Docker construya y levante los contenedores (~5 minutos la primera vez)
+Una vez levantado el Dev Container, abre tu navegador en:
 
-### 3. Acceder a Jenkins
+| Campo     | Valor                     |
+|-----------|---------------------------|
+| URL       | http://localhost:8081     |
+| Usuario   | `admin`                   |
+| Contraseña| `admin`                   |
 
-Una vez levantado el Dev Container:
+---
 
-- **URL**: http://localhost:8081
-- **Usuario**: `admin`
-- **Contraseña**: `admin`
+## 💻 Uso
 
-## 📁 Estructura del Proyecto
+### Ejecutar un pipeline de Copilot CLI
 
-```
-.
-├── .devcontainer/
-│   ├── devcontainer.json        # Configuración del Dev Container
-│   ├── docker-compose.yml       # Servicios Docker
-│   ├── Dockerfile.devcontainer  # Imagen para desarrollo
-│   ├── Dockerfile.jenkins       # Imagen de Jenkins personalizada
-│   └── jenkins-config/
-│       ├── casc.yaml            # Jenkins Configuration as Code
-│       └── plugins.txt          # Plugins de Jenkins
-├── src/                         # Proyecto Node.js de ejemplo
-│   ├── index.ts
-│   ├── utils.ts
-│   └── utils.test.ts
-├── pipelines/
-│   ├── code-review.jenkinsfile
-│   ├── docs-generator.jenkinsfile
-│   └── code-analysis.jenkinsfile
-├── scripts/
-│   └── install-copilot-cli.sh
-├── Jenkinsfile                  # Pipeline principal
-├── package.json
-└── README.md
-```
-
-## 🔧 Pipelines Disponibles
-
-### 📝 Code Review (`copilot-demos/code-review`)
-
-Ejecuta una revisión automática del código usando Copilot CLI:
-
-- Analiza cada archivo TypeScript
-- Genera sugerencias de mejoras
-- Crea un reporte en Markdown
-
-### 📚 Documentation Generator (`copilot-demos/docs-generator`)
-
-Genera documentación automáticamente:
-
-- README con instrucciones
-- Documentación de API
-- Explicación de funciones
-
-### 🔍 Code Analysis (`copilot-demos/code-analysis`)
-
-Analiza la calidad del código:
-
-- Métricas de complejidad
-- Sugerencias de seguridad
-- Recomendaciones de mejoras
-- Reporte HTML publicado en Jenkins como **Copilot Code Analysis Report**
-- Artefactos descargables: `analysis/report.html` y `analysis/report.md`
-
-### 🚀 Main Pipeline
-
-Pipeline orquestador que ejecuta todos los demos:
+En Jenkins, navega a uno de los pipelines disponibles bajo `copilot-demos/` y haz clic en **"Build with Parameters"**:
 
 ```
-Jenkins > main-pipeline > Build with Parameters
+Jenkins > copilot-demos > code-review > Build with Parameters
 ```
 
-Opciones:
-- `DEMO_TYPE`: ALL, CODE_REVIEW, DOCS_GENERATOR, CODE_ANALYSIS
-- `RUN_TESTS`: Ejecutar tests antes de los demos
-- `INSTALL_DEPS`: Instalar dependencias npm
+### Usar el Chat de Copilot en la UI de Jenkins
 
-## 💡 Uso de Copilot CLI en Jenkins
+Una vez instalado el plugin `copilot-chat`:
 
-Este proyecto usa el binario nuevo de GitHub Copilot CLI, `copilot`, no la extensión antigua `gh-copilot`.
+1. Aparece un **botón flotante** con el logo de GitHub Copilot en la esquina de la interfaz de Jenkins
+2. Haz clic para abrir el panel de chat
+3. Pulsa **"Sign in with GitHub"** y sigue el flujo de autenticación Device Flow:
+   - Se mostrará un código de dispositivo y una URL de verificación
+   - Introduce el código en GitHub para autorizar el acceso
+4. ¡Listo! Ya puedes **chatear con GitHub Copilot** desde dentro de Jenkins
 
-### Comando básico con agentes
+```
+Jenkins > (botón flotante Copilot Chat) > Sign in with GitHub > Escribe tu pregunta
+```
+
+### Ejemplo: Ejecutar el pipeline principal con todos los demos
 
 ```groovy
-stage('Copilot Agent Analysis') {
-    steps {
-        withCredentials([string(credentialsId: 'gh-token', variable: 'COPILOT_GITHUB_TOKEN')]) {
-            sh '''
-                copilot --prompt "Analyze this repository and summarize the main risks"
-            '''
-        }
-    }
-}
+// Opciones del pipeline principal (Jenkinsfile)
+DEMO_TYPE  → ALL | CODE_REVIEW | DOCS_GENERATOR | CODE_ANALYSIS
+RUN_TESTS  → true | false
+INSTALL_DEPS → true | false
 ```
 
-### Ejecución no interactiva en Jenkins
+### Ejemplo: Usar Copilot CLI en un stage personalizado
 
 ```groovy
-stage('Copilot Agent Report') {
+stage('Análisis con Copilot') {
     steps {
         withCredentials([string(credentialsId: 'gh-token', variable: 'COPILOT_GITHUB_TOKEN')]) {
             sh '''
@@ -174,53 +167,210 @@ stage('Copilot Agent Report') {
 }
 ```
 
+---
+
+## 📁 Estructura del Proyecto
+
+```
+github-copilot-and-jenkins/
+├── .devcontainer/
+│   ├── devcontainer.json           # Configuración del Dev Container
+│   ├── docker-compose.yml          # Servicios Docker (Jenkins + devcontainer)
+│   ├── Dockerfile.devcontainer     # Imagen del entorno de desarrollo
+│   ├── Dockerfile.jenkins          # Imagen de Jenkins personalizada
+│   └── jenkins-config/
+│       ├── casc.yaml               # Jenkins Configuration as Code
+│       └── plugins.txt             # Plugins de Jenkins a instalar
+├── jenkins-copilot-chat-plugin/    # 🔌 Plugin de Jenkins para chat con Copilot
+│   └── src/main/
+│       ├── java/io/jenkins/plugins/copilotchat/
+│       │   ├── CopilotChatRootAction.java      # Endpoint REST del chat
+│       │   ├── CopilotChatConfiguration.java   # Configuración del plugin
+│       │   ├── CopilotChatSessionService.java  # Gestión de sesiones de chat
+│       │   ├── DeviceFlowAuthService.java      # Autenticación OAuth Device Flow
+│       │   └── CopilotChatPageDecorator.java   # Inyección del widget en la UI
+│       ├── resources/                          # Templates Jelly (UI)
+│       └── webapp/
+│           ├── copilot-chat.js                 # Lógica del widget de chat
+│           ├── copilot-chat.css                # Estilos del widget
+│           └── images/                         # Logos e iconos
+├── pipelines/
+│   ├── code-review.jenkinsfile     # Pipeline de code review automático
+│   ├── docs-generator.jenkinsfile  # Pipeline de generación de documentación
+│   └── code-analysis.jenkinsfile   # Pipeline de análisis de código
+├── scripts/
+│   ├── install-copilot-cli.sh      # Script de instalación de Copilot CLI
+│   └── sync-jenkins-gh-token.sh    # Sincronización del token con Jenkins
+├── src/                            # Proyecto Node.js/TypeScript de ejemplo
+│   ├── index.ts
+│   ├── utils.ts
+│   └── utils.test.ts
+├── Jenkinsfile                     # Pipeline principal orquestador
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## 🔧 Pipelines Disponibles
+
+### 📝 Code Review (`copilot-demos/code-review`)
+
+Ejecuta una revisión automática del código usando Copilot CLI:
+
+- Analiza cada archivo TypeScript del proyecto
+- Genera sugerencias de mejoras y buenas prácticas
+- Crea un reporte en Markdown como artefacto de Jenkins
+
+### �� Documentation Generator (`copilot-demos/docs-generator`)
+
+Genera documentación automáticamente con IA:
+
+- README con instrucciones de uso
+- Documentación de API y funciones
+- Explicación detallada del código
+
+### 🔍 Code Analysis (`copilot-demos/code-analysis`)
+
+Analiza en profundidad la calidad del código:
+
+- Métricas de complejidad ciclomática
+- Sugerencias de seguridad y vulnerabilidades
+- Recomendaciones de refactoring
+- Reporte HTML publicado en Jenkins como **Copilot Code Analysis Report**
+- Artefactos descargables: `analysis/report.html` y `analysis/report.md`
+
+### 🚀 Main Pipeline (`Jenkinsfile`)
+
+Pipeline orquestador que ejecuta todos los demos de forma configurable:
+
+```
+Jenkins > main-pipeline > Build with Parameters
+```
+
+| Parámetro     | Opciones                                            |
+|---------------|-----------------------------------------------------|
+| `DEMO_TYPE`   | `ALL`, `CODE_REVIEW`, `DOCS_GENERATOR`, `CODE_ANALYSIS` |
+| `RUN_TESTS`   | `true` / `false`                                    |
+| `INSTALL_DEPS`| `true` / `false`                                    |
+
+---
+
+## 🔌 Plugin Copilot Chat para Jenkins
+
+El directorio `jenkins-copilot-chat-plugin/` contiene un **plugin de Jenkins** que integra un widget de chat con GitHub Copilot directamente en la interfaz web de Jenkins.
+
+### ¿Qué hace?
+
+- Añade un **botón flotante** con el logo de GitHub Copilot en todas las páginas de Jenkins
+- Abre un **panel de chat** lateral donde puedes conversar con Copilot sobre tus builds, pipelines o código
+- Usa **OAuth Device Flow** para autenticar tu cuenta de GitHub de forma segura
+- Gestiona **sesiones de chat individuales** por usuario de Jenkins
+- Permite configurar el **modelo de IA** (por defecto `gpt-4.1`), las herramientas disponibles y el timeout
+
+### Configuración del plugin
+
+Una vez instalado el `.hpi`, accede a la configuración global de Jenkins:
+
+```
+Manage Jenkins > System > Copilot Chat
+```
+
+| Campo                  | Descripción                                      | Valor por defecto   |
+|------------------------|--------------------------------------------------|---------------------|
+| Client ID              | ID de la GitHub App o OAuth App                  | —                   |
+| CLI Path               | Ruta al binario `copilot` (opcional)             | —                   |
+| Default Model          | Modelo de IA a utilizar                          | `gpt-4.1`           |
+| Available Tools        | Herramientas habilitadas para Copilot            | `read_file,search_code,list_dir` |
+| Request Timeout (s)    | Tiempo máximo de espera por respuesta            | `120`               |
+
+### Compilar el plugin
+
+```bash
+cd jenkins-copilot-chat-plugin
+mvn clean package -DskipTests
+# El archivo .hpi se genera en: target/copilot-chat.hpi
+```
+
+### Instalar manualmente el plugin
+
+```
+Manage Jenkins > Manage Plugins > Advanced > Upload Plugin > selecciona copilot-chat.hpi
+```
+
+---
+
 ## 🔒 Seguridad
 
-⚠️ **Importante**: Nunca subas tu `GH_TOKEN` al repositorio.
+> ⚠️ **Importante**: Nunca subas tu `GH_TOKEN` al repositorio.
 
-Este proyecto usa:
-- **Jenkins Credentials** para almacenar el token de forma segura
-- **Variable de entorno** pasada desde el host al Dev Container
-- **Credential Binding** en los pipelines
+Este proyecto gestiona las credenciales de forma segura:
 
-Jenkins crea dos credenciales a partir de `GH_TOKEN`:
+- **Jenkins Credentials** — El token se almacena cifrado en Jenkins, nunca en texto plano
+- **Variable de entorno en Dev Container** — El token se pasa desde el host, no se guarda en el contenedor
+- **Credential Binding en pipelines** — Los stages acceden al token solo cuando lo necesitan
 
-- `gh-token`: token secreto usado por los pipelines para ejecutar `copilot`
-- `github-token`: usuario/password usado por Git para clonar este repositorio privado desde GitHub
+Jenkins crea automáticamente dos credenciales a partir de `GH_TOKEN`:
+
+| Credencial       | Tipo            | Uso                                              |
+|------------------|-----------------|--------------------------------------------------|
+| `gh-token`       | Secret text     | Ejecutar el binario `copilot` en los pipelines   |
+| `github-token`   | Username/Password | Clonar el repositorio privado desde Jenkins    |
+
+---
 
 ## 🐛 Troubleshooting
 
 ### El Dev Container no levanta
 
 1. Verifica que Docker Desktop esté corriendo
-2. Comprueba que tienes suficiente memoria asignada a Docker (mínimo 4GB)
+2. Comprueba que tienes suficiente memoria asignada a Docker (mínimo 4 GB)
 3. Intenta reconstruir: `Ctrl+Shift+P` > "Dev Containers: Rebuild Container"
 
 ### Jenkins no reconoce el token
 
-1. Verifica que `GH_TOKEN` esté definido antes de abrir VS Code
+1. Verifica que `GH_TOKEN` esté definido **antes** de abrir VS Code
 2. Ejecuta `scripts/sync-jenkins-gh-token.sh` desde la terminal integrada
-3. Reinicia el Dev Container si `GH_TOKEN` se definió después de abrir VS Code
-4. Comprueba las credenciales en Jenkins: Manage Jenkins > Credentials
+3. Reinicia el Dev Container si `GH_TOKEN` se definió después de abrir el contenedor
+4. Comprueba las credenciales en: **Manage Jenkins > Credentials**
 
-Si el repositorio es privado, el token debe ser válido para GitHub API y tener acceso de lectura al repo. Para un token classic usa el scope `repo`; para un fine-grained token concede acceso al repositorio y permiso `Contents: Read`.
+> Para repos privados: usa scope `repo` en classic PAT o permiso `Contents: Read` en fine-grained PAT.
 
 ### Copilot CLI no responde
 
-1. Verifica que tu token tenga permiso `Copilot Requests`
-2. Comprueba tu suscripción a GitHub Copilot
+1. Verifica que tu token tenga el permiso `Copilot Requests`
+2. Comprueba tu suscripción activa a GitHub Copilot
 3. Ejecuta `copilot --version` para verificar que el binario está instalado
+
+### El widget de chat no aparece en Jenkins
+
+1. Verifica que el plugin `.hpi` esté instalado correctamente
+2. Comprueba que el **Client ID** esté configurado en: **Manage Jenkins > System > Copilot Chat**
+3. Reinicia Jenkins tras la instalación del plugin
+
+---
 
 ## 📚 Recursos
 
 - [GitHub Copilot CLI Documentation](https://docs.github.com/en/copilot/github-copilot-in-the-cli)
-- [Jenkins Configuration as Code](https://www.jenkins.io/projects/jcasc/)
+- [GitHub Copilot SDK for Java](https://github.com/github/copilot-sdk-java)
+- [Jenkins Configuration as Code (JCasC)](https://www.jenkins.io/projects/jcasc/)
 - [Dev Containers Specification](https://containers.dev/)
-
-## 📄 Licencia
-
-MIT License - Siéntete libre de usar este proyecto como base para tus propias integraciones.
+- [Jenkins Plugin Development](https://www.jenkins.io/doc/developer/plugin-development/)
+- [OAuth Device Flow — GitHub Docs](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow)
 
 ---
 
-Made with ❤️ for the DevOps community
+## 🌐 Sígueme en Mis Redes Sociales
+
+Si te ha gustado este proyecto y quieres ver más contenido como este, no olvides suscribirte a mi canal de YouTube y seguirme en mis redes sociales:
+
+<div align="center">
+
+[![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UC140iBrEZbOtvxWsJ-Tb0lQ?style=for-the-badge&logo=youtube&logoColor=white&color=red)](https://www.youtube.com/c/GiselaTorres?sub_confirmation=1)
+[![GitHub followers](https://img.shields.io/github/followers/0GiS0?style=for-the-badge&logo=github&logoColor=white)](https://github.com/0GiS0)
+[![LinkedIn Follow](https://img.shields.io/badge/LinkedIn-Sígueme-blue?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/giselatorresbuitrago/)
+[![X Follow](https://img.shields.io/badge/X-Sígueme-black?style=for-the-badge&logo=x&logoColor=white)](https://twitter.com/0GiS0)
+
+</div>
