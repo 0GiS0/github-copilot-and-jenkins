@@ -125,6 +125,8 @@ Analiza la calidad del código:
 - Métricas de complejidad
 - Sugerencias de seguridad
 - Recomendaciones de mejoras
+- Reporte HTML publicado en Jenkins como **Copilot Code Analysis Report**
+- Artefactos descargables: `analysis/report.html` y `analysis/report.md`
 
 ### 🚀 Main Pipeline
 
