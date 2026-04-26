@@ -61,7 +61,7 @@ $env:GH_TOKEN="tu_token_aqui"
 
 Una vez levantado el Dev Container:
 
-- **URL**: http://localhost:8080
+- **URL**: http://localhost:8081
 - **Usuario**: `admin`
 - **Contraseña**: `admin`
 

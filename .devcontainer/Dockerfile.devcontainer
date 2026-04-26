@@ -1,23 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
-# Install Node.js 20 and npm
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
-
-# Install GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y gh
-
-# Install GitHub Copilot CLI extension
-RUN gh extension install github/gh-copilot || true
-
-# Install useful tools
-RUN apt-get install -y jq curl wget
-
-# Clean up
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install useful tools (Node.js and GitHub CLI are installed via devcontainer features)
+RUN apt-get update && apt-get install -y jq curl wget \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

@@ -29,4 +29,9 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 COPY jenkins-config/plugins.txt /usr/share/jenkins/ref/plugins.txt
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
+# Copy init groovy scripts for job creation
+COPY jenkins-config/init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
+
+USER jenkins
+
 USER jenkins

@@ -1,13 +1,10 @@
 services:
   devcontainer:
-    build:
-      context: .
-      dockerfile: Dockerfile.devcontainer
+    image: mcr.microsoft.com/devcontainers/base:ubuntu
+    command: sleep infinity
     volumes:
       - ..:/workspace:cached
       - jenkins_home:/var/jenkins_home
-    environment:
-      - GH_TOKEN=${GH_TOKEN}
     depends_on:
       - jenkins
     networks:
@@ -18,7 +15,7 @@ services:
       context: .
       dockerfile: Dockerfile.jenkins
     ports:
-      - "8080:8080"
+      - "8081:8080"
       - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
@@ -27,7 +24,7 @@ services:
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
       - CASC_JENKINS_CONFIG=/var/jenkins_config/casc.yaml
-      - GH_TOKEN=${GH_TOKEN}
+      
     networks:
       - jenkins-net
 
@@ -36,4 +33,3 @@ volumes:
 
 networks:
   jenkins-net:
-    driver: bridge

@@ -1,12 +1,14 @@
 {
-  "name": "GitHub Copilot CLI + Jenkins Demo",
+  "name": "🤖 GitHub Copilot and 👨🏻 Jenkins Demo",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
-  "forwardPorts": [8080],
+  "forwardPorts": [
+    8081
+  ],
   "portsAttributes": {
-    "8080": {
-      "label": "Jenkins",
+    "8081": {
+      "label": "🧪 Jenkins",
       "onAutoForward": "notify"
     }
   },
@@ -17,7 +19,8 @@
         "github.copilot-chat",
         "ms-azuretools.vscode-docker",
         "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+        "GitHub.copilot"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
