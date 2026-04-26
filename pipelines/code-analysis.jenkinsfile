@@ -197,10 +197,43 @@ EOF
             sh '''
                 if [ -f analysis/report.md ]; then
                     python3 - <<'PY'
-from html import escape
 from pathlib import Path
 
 markdown = Path('analysis/report.md').read_text(encoding='utf-8')
+
+def escape(value: str) -> str:
+    return (
+        str(value)
+        .replace('&', '&amp;')
+        .replace('<', '&lt;')
+        .replace('>', '&gt;')
+        .replace('"', '&quot;')
+        .replace("'", '&#x27;')
+    )
+
+def render_inline(text: str) -> str:
+    result = []
+    index = 0
+    while index < len(text):
+        if text[index] == '`':
+            end = text.find('`', index + 1)
+            if end != -1:
+                result.append(f'<code>{escape(text[index + 1:end])}</code>')
+                index = end + 1
+                continue
+        if text.startswith('**', index):
+            end = text.find('**', index + 2)
+            if end != -1:
+                result.append(f'<strong>{render_inline(text[index + 2:end])}</strong>')
+                index = end + 2
+                continue
+        next_code = text.find('`', index)
+        next_bold = text.find('**', index)
+        candidates = [position for position in (next_code, next_bold) if position != -1]
+        next_marker = min(candidates) if candidates else len(text)
+        result.append(escape(text[index:next_marker]))
+        index = next_marker
+    return ''.join(result)
 
 def render_markdown(source: str) -> str:
     lines = source.splitlines()
@@ -215,7 +248,7 @@ def render_markdown(source: str) -> str:
             output.append('</ul>')
             in_ul = False
         if in_table:
-            output.append('</tbody></table>')
+            output.append('</tbody></table></div>')
             in_table = False
             table_has_header = False
 
@@ -224,62 +257,190 @@ def render_markdown(source: str) -> str:
         if not stripped:
             close_blocks()
             continue
+        if stripped == '---':
+            close_blocks()
+            output.append('<hr>')
+            continue
         if stripped.startswith('|') and stripped.endswith('|'):
-            cells = [escape(cell.strip()) for cell in stripped.strip('|').split('|')]
+            cells = [render_inline(cell.strip()) for cell in stripped.strip('|').split('|')]
             if all(set(cell.replace('-', '').replace(':', '').strip()) == set() for cell in cells):
                 continue
             if not in_table:
                 close_blocks()
-                output.append('<table><tbody>')
+                output.append('<div class="table-wrap"><table><tbody>')
                 in_table = True
                 table_has_header = False
             tag = 'th' if not table_has_header else 'td'
             table_has_header = True
             output.append('<tr>' + ''.join(f'<{tag}>{cell}</{tag}>' for cell in cells) + '</tr>')
             continue
-        close_blocks()
-        if stripped.startswith('### '):
-            output.append(f'<h3>{escape(stripped[4:])}</h3>')
-        elif stripped.startswith('## '):
-            output.append(f'<h2>{escape(stripped[3:])}</h2>')
-        elif stripped.startswith('# '):
-            output.append(f'<h1>{escape(stripped[2:])}</h1>')
-        elif stripped.startswith('- '):
+        if stripped.startswith('- '):
+            if in_table:
+                output.append('</tbody></table></div>')
+                in_table = False
+                table_has_header = False
             if not in_ul:
                 output.append('<ul>')
                 in_ul = True
-            output.append(f'<li>{escape(stripped[2:])}</li>')
+            output.append(f'<li>{render_inline(stripped[2:])}</li>')
+            continue
+        close_blocks()
+        if stripped.startswith('#### '):
+            output.append(f'<h4>{render_inline(stripped[5:])}</h4>')
+        elif stripped.startswith('### '):
+            output.append(f'<h3>{render_inline(stripped[4:])}</h3>')
+        elif stripped.startswith('## '):
+            output.append(f'<h2>{render_inline(stripped[3:])}</h2>')
+        elif stripped.startswith('# '):
+            output.append(f'<h1>{render_inline(stripped[2:])}</h1>')
         else:
-            output.append(f'<p>{escape(stripped)}</p>')
+            output.append(f'<p>{render_inline(stripped)}</p>')
     close_blocks()
-    return '\\n'.join(output)
+    return chr(10).join(output)
 
 body = render_markdown(markdown)
+css = """
+:root {
+    color-scheme: light;
+    --bg: #f6f8fa;
+    --panel: #ffffff;
+    --text: #1f2328;
+    --muted: #656d76;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --success: #1a7f37;
+    --warning: #9a6700;
+    --danger: #cf222e;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.report-shell {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+}
+.report-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 16px 42px rgba(31, 35, 40, .08);
+    overflow: hidden;
+}
+.report-header {
+    padding: 28px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #ffffff 0%, #f6f8fa 100%);
+}
+.report-header h1 {
+    margin: 0 0 10px;
+    font-size: 32px;
+    line-height: 1.2;
+    letter-spacing: 0;
+}
+.report-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: var(--muted);
+}
+.meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    padding: 4px 10px;
+    font-size: 13px;
+}
+.report-content { padding: 24px 32px 34px; }
+h1:first-child, p:nth-child(2), p:nth-child(3) { display: none; }
+h2 {
+    margin: 30px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 22px;
+}
+h3 {
+    margin: 24px 0 10px;
+    color: var(--accent);
+    font-size: 18px;
+}
+h4 { margin: 18px 0 8px; font-size: 16px; }
+p { margin: 10px 0; }
+ul { margin: 10px 0 16px 22px; padding: 0; }
+li { margin: 6px 0; }
+strong { font-weight: 700; }
+code {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: #f6f8fa;
+    padding: 1px 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .92em;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 22px 0; }
+.table-wrap { overflow-x: auto; margin: 14px 0 20px; }
+table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: #f6f8fa; font-weight: 700; }
+tr:last-child td { border-bottom: 0; }
+@media (max-width: 720px) {
+    .report-shell { padding: 16px; }
+    .report-header, .report-content { padding: 22px 18px; }
+    .report-header h1 { font-size: 26px; }
+}
+"""
 html = f"""<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Code Analysis Report</title>
-    <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.55; margin: 2rem auto; max-width: 980px; padding: 0 1rem; color: #1f2328; }}
-        pre {{ background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; padding: 1rem; overflow: auto; white-space: pre-wrap; }}
-        h1, h2, h3 {{ border-bottom: 1px solid #d8dee4; padding-bottom: .3rem; }}
-        table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
-        th, td {{ border: 1px solid #d0d7de; padding: .45rem .6rem; }}
-        th {{ background: #f6f8fa; }}
-    </style>
+    <link rel="stylesheet" href="report.css">
 </head>
 <body>
-    {body}
+    <main class="report-shell">
+        <article class="report-card">
+            <header class="report-header">
+                <h1>Project Analysis Report</h1>
+                <div class="report-meta">
+                    <span class="meta-pill">Generated by GitHub Copilot CLI</span>
+                    <span class="meta-pill">Jenkins build report</span>
+                </div>
+            </header>
+            <section class="report-content">
+                {body}
+            </section>
+        </article>
+    </main>
 </body>
 </html>
 """
+Path('analysis/report.css').write_text(css, encoding='utf-8')
 Path('analysis/report.html').write_text(html, encoding='utf-8')
 PY
                 fi
             '''
-            archiveArtifacts artifacts: 'analysis/*.md, analysis/*.html', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'analysis/*.md, analysis/*.html, analysis/*.css', allowEmptyArchive: true
             publishHTML(target: [
                 reportDir: 'analysis',
                 reportFiles: 'report.html',
