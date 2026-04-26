@@ -251,6 +251,7 @@ def render_markdown(source: str) -> str:
     in_ul = False
     in_table = False
     table_has_header = False
+    in_section = False
 
     def close_blocks():
         nonlocal in_ul, in_table, table_has_header
@@ -261,6 +262,13 @@ def render_markdown(source: str) -> str:
             output.append('</tbody></table></div>')
             in_table = False
             table_has_header = False
+
+    def close_section():
+        nonlocal in_section
+        if in_section:
+            close_blocks()
+            output.append('</div></details>')
+            in_section = False
 
     for line in lines:
         stripped = line.strip()
@@ -300,12 +308,15 @@ def render_markdown(source: str) -> str:
         elif stripped.startswith('### '):
             output.append(f'<h3>{render_inline(stripped[4:])}</h3>')
         elif stripped.startswith('## '):
-            output.append(f'<h2>{render_inline(stripped[3:])}</h2>')
+            close_section()
+            output.append(f'<details class="report-section" open><summary>{render_inline(stripped[3:])}</summary><div class="section-body">')
+            in_section = True
         elif stripped.startswith('# '):
             output.append(f'<h1>{render_inline(stripped[2:])}</h1>')
         else:
             output.append(f'<p>{render_inline(stripped)}</p>')
     close_blocks()
+    close_section()
     return chr(10).join(output)
 
 body = render_markdown(markdown)
@@ -371,6 +382,41 @@ body {
 }
 .report-content { padding: 24px 32px 34px; }
 h1:first-child, p:nth-child(2), p:nth-child(3) { display: none; }
+.report-section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    margin: 16px 0;
+    overflow: hidden;
+}
+.report-section summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 15px 18px;
+    background: #f6f8fa;
+    color: var(--text);
+    font-size: 19px;
+    font-weight: 700;
+    user-select: none;
+}
+.report-section summary::before {
+    content: '›';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--accent);
+    font-size: 22px;
+    line-height: 1;
+    transform: rotate(0deg);
+    transition: transform .12s ease;
+}
+.report-section[open] summary::before { transform: rotate(90deg); }
+.report-section summary::-webkit-details-marker { display: none; }
+.section-body { padding: 6px 18px 18px; }
 h2 {
     margin: 30px 0 14px;
     padding-bottom: 8px;
@@ -417,6 +463,8 @@ tr:last-child td { border-bottom: 0; }
     .report-shell { padding: 16px; }
     .report-header, .report-content { padding: 22px 18px; }
     .report-header h1 { font-size: 26px; }
+    .report-section summary { font-size: 17px; padding: 13px 14px; }
+    .section-body { padding: 4px 14px 14px; }
 }
 """
 html = f"""<!doctype html>
