@@ -255,7 +255,7 @@ def render_markdown(source: str) -> str:
     return '\n'.join(output)
 
 body = render_markdown(markdown)
-html = f'''<!doctype html>
+html = f"""<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -274,7 +274,7 @@ html = f'''<!doctype html>
     {body}
 </body>
 </html>
-'''
+"""
 Path('analysis/report.html').write_text(html, encoding='utf-8')
 PY
                 fi
