@@ -1,6 +1,10 @@
 import jenkins.model.Jenkins
+import javaposse.jobdsl.dsl.DslScriptLoader
 import javaposse.jobdsl.plugin.*
 import hudson.model.*
+
+def repositoryUrl = 'https://github.com/0GiS0/github-copilot-and-jenkins.git'
+def gitCredentialsId = 'github-token'
 
 def jobDsl = """
 folder('copilot-demos') {
@@ -16,7 +20,8 @@ pipelineJob('copilot-demos/code-review') {
             scm {
                 git {
                     remote {
-                        url('/workspace')
+                        url('${repositoryUrl}')
+                        credentials('${gitCredentialsId}')
                     }
                     branches('*/main')
                 }
@@ -34,7 +39,8 @@ pipelineJob('copilot-demos/docs-generator') {
             scm {
                 git {
                     remote {
-                        url('/workspace')
+                        url('${repositoryUrl}')
+                        credentials('${gitCredentialsId}')
                     }
                     branches('*/main')
                 }
@@ -52,7 +58,8 @@ pipelineJob('copilot-demos/code-analysis') {
             scm {
                 git {
                     remote {
-                        url('/workspace')
+                        url('${repositoryUrl}')
+                        credentials('${gitCredentialsId}')
                     }
                     branches('*/main')
                 }
@@ -70,7 +77,8 @@ pipelineJob('main-pipeline') {
             scm {
                 git {
                     remote {
-                        url('/workspace')
+                        url('${repositoryUrl}')
+                        credentials('${gitCredentialsId}')
                     }
                     branches('*/main')
                 }
@@ -85,17 +93,6 @@ def jenkins = Jenkins.instance
 def workspace = new File(System.getProperty("java.io.tmpdir"), "jobdsl-workspace")
 workspace.mkdirs()
 
-def scriptFile = new File(workspace, "jobs.groovy")
-scriptFile.text = jobDsl
-
-def seedJob = jenkins.createProject(FreeStyleProject, "seed-job-init")
-seedJob.buildersList.add(new ExecuteDslScripts(
-    new ExecuteDslScripts.ScriptLocation(null, null, jobDsl),
-    false,
-    RemovedJobAction.DELETE,
-    RemovedViewAction.DELETE,
-    LookupStrategy.JENKINS_ROOT
-))
-
-def cause = new Cause.UserIdCause()
-seedJob.scheduleBuild(0, cause)
+def jobManagement = new JenkinsJobManagement(System.out, [:], workspace)
+new DslScriptLoader(jobManagement).runScript(jobDsl)
+jenkins.save()

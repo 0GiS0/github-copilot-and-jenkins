@@ -28,13 +28,14 @@
     }
   },
   "postCreateCommand": "npm install && chmod +x scripts/*.sh",
+  "postStartCommand": "scripts/sync-jenkins-gh-token.sh || true",
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}"
   },
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
+      "version": "22"
     }
   }
 }

@@ -9,6 +9,8 @@ pipeline {
     
     environment {
         GH_TOKEN = credentials('gh-token')
+        COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        PATH+COPILOT = "${env.HOME}/.local/bin:/usr/local/bin"
     }
     
     stages {
@@ -16,11 +18,13 @@ pipeline {
             steps {
                 echo '📦 Checking GitHub Copilot CLI installation...'
                 sh '''
-                    if ! gh extension list | grep -q "gh-copilot"; then
-                        echo "Installing gh-copilot extension..."
-                        gh extension install github/gh-copilot || true
+                    if ! command -v copilot >/dev/null 2>&1; then
+                        echo "Installing GitHub Copilot CLI..."
+                        curl -fsSL https://gh.io/copilot-install | PREFIX="$HOME/.local" bash
                     fi
-                    echo "✅ Copilot CLI is ready"
+
+                    copilot --version
+                    echo "✅ GitHub Copilot CLI is ready"
                 '''
             }
         }
@@ -53,16 +57,22 @@ pipeline {
                         echo "## Reviewing: $file" >> reports/code-review.md
                         echo "" >> reports/code-review.md
                         
-                        # Use Copilot to explain and review the code
+                        # Use Copilot CLI agent to review the code
                         echo "Reviewing $file..."
-                        
-                        # Get file content and ask Copilot for review
-                        content=$(cat "$file")
-                        
-                        # Ask Copilot to explain the code
+
                         echo "### Code Explanation" >> reports/code-review.md
                         echo '```' >> reports/code-review.md
-                        gh copilot explain "Review this TypeScript code for best practices, potential bugs, and improvements: $(head -50 $file)" 2>&1 | head -100 >> reports/code-review.md || echo "Review completed" >> reports/code-review.md
+
+                        cat > reports/copilot-review-prompt.txt <<EOF
+Use the Code-review agent to review this TypeScript file for genuine bugs, maintainability risks, and practical improvements.
+Return concise Markdown. Do not modify files.
+
+File: $file
+
+$(head -100 "$file")
+EOF
+
+                        copilot --autopilot --yolo --max-autopilot-continues 3 --agent=code-review --prompt "$(cat reports/copilot-review-prompt.txt)" 2>&1 | head -120 >> reports/code-review.md || echo "Copilot CLI review could not be completed" >> reports/code-review.md
                         echo '```' >> reports/code-review.md
                         echo "" >> reports/code-review.md
                         

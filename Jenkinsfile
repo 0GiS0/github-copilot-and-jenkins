@@ -10,6 +10,8 @@ pipeline {
     
     environment {
         GH_TOKEN = credentials('gh-token')
+        COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        PATH+COPILOT = "${env.HOME}/.local/bin:/usr/local/bin"
     }
     
     parameters {
@@ -41,15 +43,12 @@ pipeline {
                 
                 echo '📦 Verifying GitHub Copilot CLI installation...'
                 sh '''
-                    echo "Checking gh CLI version..."
-                    gh --version
-                    
-                    if ! gh extension list | grep -q "gh-copilot"; then
-                        echo "Installing gh-copilot extension..."
-                        gh extension install github/gh-copilot || true
-                    else
-                        echo "✅ gh-copilot extension already installed"
+                    if ! command -v copilot >/dev/null 2>&1; then
+                        echo "Installing GitHub Copilot CLI..."
+                        curl -fsSL https://gh.io/copilot-install | PREFIX="$HOME/.local" bash
                     fi
+
+                    copilot --version
                 '''
             }
         }

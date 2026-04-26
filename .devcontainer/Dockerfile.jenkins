@@ -2,8 +2,8 @@ FROM jenkins/jenkins:lts
 
 USER root
 
-# Install Node.js 20
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+# Install Node.js 22 for GitHub Copilot CLI
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs
 
 # Install GitHub CLI
@@ -13,11 +13,8 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get update \
     && apt-get install -y gh
 
-# Install GitHub Copilot CLI extension for jenkins user
-USER jenkins
-RUN gh extension install github/gh-copilot || true
-
-USER root
+# Install GitHub Copilot CLI
+RUN npm install -g @github/copilot
 
 # Install useful tools
 RUN apt-get install -y jq

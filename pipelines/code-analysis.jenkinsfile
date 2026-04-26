@@ -9,6 +9,8 @@ pipeline {
     
     environment {
         GH_TOKEN = credentials('gh-token')
+        COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        PATH+COPILOT = "${env.HOME}/.local/bin:/usr/local/bin"
     }
     
     stages {
@@ -16,11 +18,13 @@ pipeline {
             steps {
                 echo '📦 Checking GitHub Copilot CLI installation...'
                 sh '''
-                    if ! gh extension list | grep -q "gh-copilot"; then
-                        echo "Installing gh-copilot extension..."
-                        gh extension install github/gh-copilot || true
+                    if ! command -v copilot >/dev/null 2>&1; then
+                        echo "Installing GitHub Copilot CLI..."
+                        curl -fsSL https://gh.io/copilot-install | PREFIX="$HOME/.local" bash
                     fi
-                    echo "✅ Copilot CLI is ready"
+
+                    copilot --version
+                    echo "✅ GitHub Copilot CLI is ready"
                 '''
             }
         }
@@ -68,11 +72,21 @@ pipeline {
                         LOC=$(wc -l < "$file")
                         echo "- Lines: $LOC" >> analysis/report.md
                         
-                        # Ask Copilot for complexity suggestions
+                        # Ask Copilot CLI agent for complexity suggestions
                         echo "" >> analysis/report.md
                         echo "**Copilot Analysis:**" >> analysis/report.md
                         echo "" >> analysis/report.md
-                        gh copilot explain "Analyze this code for complexity and suggest improvements: $(head -30 $file)" 2>&1 | head -50 >> analysis/report.md || echo "Analysis completed" >> analysis/report.md
+
+                        cat > analysis/copilot-prompt.txt <<EOF
+Use the Explore agent to analyze this TypeScript file for complexity, maintainability, and focused improvement opportunities.
+Return a concise Markdown section. Do not modify files.
+
+File: $file
+
+$(head -80 "$file")
+EOF
+
+                        copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-prompt.txt)" 2>&1 | head -80 >> analysis/report.md || echo "Copilot CLI analysis could not be completed" >> analysis/report.md
                         echo "" >> analysis/report.md
                     done
                 '''
@@ -102,7 +116,14 @@ pipeline {
                     echo "" >> analysis/report.md
                     echo "**Copilot Security Recommendations:**" >> analysis/report.md
                     echo "" >> analysis/report.md
-                    gh copilot explain "What are best security practices for a Node.js TypeScript application?" 2>&1 | head -40 >> analysis/report.md || echo "Security recommendations completed" >> analysis/report.md
+
+                    cat > analysis/copilot-security-prompt.txt <<'EOF'
+Use the Explore agent to review this Node.js TypeScript project for security risks.
+Focus on practical recommendations for code in src/, dependency usage, secrets handling, and CI safety.
+Return concise Markdown bullets. Do not modify files.
+EOF
+
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-security-prompt.txt)" 2>&1 | head -80 >> analysis/report.md || echo "Copilot CLI security recommendations could not be completed" >> analysis/report.md
                 '''
             }
         }
@@ -117,12 +138,26 @@ pipeline {
                     # Get general suggestions
                     echo "### General Recommendations" >> analysis/report.md
                     echo "" >> analysis/report.md
-                    gh copilot explain "Suggest improvements for a TypeScript project with utility functions" 2>&1 | head -50 >> analysis/report.md || echo "Suggestions completed" >> analysis/report.md
+
+                    cat > analysis/copilot-improvements-prompt.txt <<'EOF'
+Use the Explore agent to suggest improvements for this TypeScript utility project.
+Review the repository structure, source code, and scripts. Return concise Markdown bullets grouped by impact.
+Do not modify files.
+EOF
+
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-improvements-prompt.txt)" 2>&1 | head -100 >> analysis/report.md || echo "Copilot CLI improvement suggestions could not be completed" >> analysis/report.md
                     
                     echo "" >> analysis/report.md
                     echo "### Testing Recommendations" >> analysis/report.md
                     echo "" >> analysis/report.md
-                    gh copilot explain "Best practices for testing TypeScript utility functions with Jest" 2>&1 | head -40 >> analysis/report.md || echo "Testing suggestions completed" >> analysis/report.md
+
+                    cat > analysis/copilot-testing-prompt.txt <<'EOF'
+Use the Explore agent to review testing practices for this TypeScript Jest project.
+Focus on missing edge cases, useful test organization, and CI-friendly recommendations.
+Return concise Markdown. Do not modify files.
+EOF
+
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-testing-prompt.txt)" 2>&1 | head -80 >> analysis/report.md || echo "Copilot CLI testing suggestions could not be completed" >> analysis/report.md
                 '''
             }
         }

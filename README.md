@@ -26,10 +26,12 @@ Repositorio de ejemplo que demuestra cómo integrar **GitHub Copilot CLI** dentr
 
 ### 1. Configurar el Token de GitHub
 
-Necesitas un token de GitHub con permisos para usar Copilot CLI:
+Necesitas un token de GitHub con permisos para usar Copilot CLI y para que Jenkins pueda descargar el contenido del repositorio privado de prueba:
 
 1. Ve a [GitHub Settings > Developer Settings > Personal Access Tokens](https://github.com/settings/tokens)
-2. Crea un nuevo token (classic) con el scope `copilot`
+2. Crea un nuevo token con estos permisos:
+    - Fine-grained PAT: acceso al repositorio de prueba, permiso `Contents: Read` y permiso `Copilot Requests`
+    - Classic PAT: scope `repo` y acceso a GitHub Copilot CLI en tu cuenta u organización
 3. Configura la variable de entorno:
 
 ```bash
@@ -38,6 +40,12 @@ export GH_TOKEN="tu_token_aqui"
 
 # En Windows PowerShell
 $env:GH_TOKEN="tu_token_aqui"
+```
+
+El Dev Container sincroniza automáticamente esta variable con la credencial `gh-token` de Jenkins al arrancar. Si `GH_TOKEN` no está definido pero `gh auth token` está disponible dentro del contenedor, el script usará ese token de GitHub CLI. Si cambias el token con el contenedor ya abierto, puedes relanzar la sincronización desde la terminal integrada:
+
+```bash
+scripts/sync-jenkins-gh-token.sh
 ```
 
 ### 2. Abrir el Dev Container
@@ -133,28 +141,32 @@ Opciones:
 
 ## 💡 Uso de Copilot CLI en Jenkins
 
-### Comando básico: `gh copilot explain`
+Este proyecto usa el binario nuevo de GitHub Copilot CLI, `copilot`, no la extensión antigua `gh-copilot`.
+
+### Comando básico con agentes
 
 ```groovy
-stage('Copilot Analysis') {
+stage('Copilot Agent Analysis') {
     steps {
-        withCredentials([string(credentialsId: 'gh-token', variable: 'GH_TOKEN')]) {
+        withCredentials([string(credentialsId: 'gh-token', variable: 'COPILOT_GITHUB_TOKEN')]) {
             sh '''
-                gh copilot explain "What does this code do: $(cat src/utils.ts)"
+                copilot --agent=explore --prompt "Analyze this repository and summarize the main risks"
             '''
         }
     }
 }
 ```
 
-### Comando: `gh copilot suggest`
+### Ejecución no interactiva en Jenkins
 
 ```groovy
-stage('Get Command Suggestion') {
+stage('Copilot Agent Report') {
     steps {
-        withCredentials([string(credentialsId: 'gh-token', variable: 'GH_TOKEN')]) {
+        withCredentials([string(credentialsId: 'gh-token', variable: 'COPILOT_GITHUB_TOKEN')]) {
             sh '''
-                gh copilot suggest -t shell "find all TypeScript files with more than 100 lines"
+                copilot --autopilot --yolo --max-autopilot-continues 3 \
+                  --agent=explore \
+                  --prompt "Review src/ and return concise Markdown recommendations"
             '''
         }
     }
@@ -170,6 +182,11 @@ Este proyecto usa:
 - **Variable de entorno** pasada desde el host al Dev Container
 - **Credential Binding** en los pipelines
 
+Jenkins crea dos credenciales a partir de `GH_TOKEN`:
+
+- `gh-token`: token secreto usado por los pipelines para ejecutar `copilot`
+- `github-token`: usuario/password usado por Git para clonar este repositorio privado desde GitHub
+
 ## 🐛 Troubleshooting
 
 ### El Dev Container no levanta
@@ -181,14 +198,17 @@ Este proyecto usa:
 ### Jenkins no reconoce el token
 
 1. Verifica que `GH_TOKEN` esté definido antes de abrir VS Code
-2. Reinicia el Dev Container después de definir la variable
-3. Comprueba las credenciales en Jenkins: Manage Jenkins > Credentials
+2. Ejecuta `scripts/sync-jenkins-gh-token.sh` desde la terminal integrada
+3. Reinicia el Dev Container si `GH_TOKEN` se definió después de abrir VS Code
+4. Comprueba las credenciales en Jenkins: Manage Jenkins > Credentials
+
+Si el repositorio es privado, el token debe ser válido para GitHub API y tener acceso de lectura al repo. Para un token classic usa el scope `repo`; para un fine-grained token concede acceso al repositorio y permiso `Contents: Read`.
 
 ### Copilot CLI no responde
 
-1. Verifica que tu token tenga el scope `copilot`
+1. Verifica que tu token tenga permiso `Copilot Requests`
 2. Comprueba tu suscripción a GitHub Copilot
-3. Ejecuta `gh auth status` para verificar la autenticación
+3. Ejecuta `copilot --version` para verificar que el binario está instalado
 
 ## 📚 Recursos
 
