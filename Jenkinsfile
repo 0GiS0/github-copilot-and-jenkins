@@ -11,7 +11,7 @@ pipeline {
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
-        PATH+COPILOT = "${env.HOME}/.local/bin:/usr/local/bin"
+        PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
     
     parameters {
