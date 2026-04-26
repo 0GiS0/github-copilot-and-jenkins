@@ -86,7 +86,7 @@ File: $file
 $(head -80 "$file")
 EOF
 
-                        copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-prompt.txt)" 2>&1 | head -80 >> analysis/report.md || echo "Copilot CLI analysis could not be completed" >> analysis/report.md
+                        copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-prompt.txt)" 2>&1 | head -80 >> analysis/report.md
                         echo "" >> analysis/report.md
                     done
                 '''
@@ -123,7 +123,7 @@ Focus on practical recommendations for code in src/, dependency usage, secrets h
 Return concise Markdown bullets. Do not modify files.
 EOF
 
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-security-prompt.txt)" 2>&1 | head -80 >> analysis/report.md || echo "Copilot CLI security recommendations could not be completed" >> analysis/report.md
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-security-prompt.txt)" 2>&1 | head -80 >> analysis/report.md
                 '''
             }
         }
@@ -145,7 +145,7 @@ Review the repository structure, source code, and scripts. Return concise Markdo
 Do not modify files.
 EOF
 
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-improvements-prompt.txt)" 2>&1 | head -100 >> analysis/report.md || echo "Copilot CLI improvement suggestions could not be completed" >> analysis/report.md
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-improvements-prompt.txt)" 2>&1 | head -100 >> analysis/report.md
                     
                     echo "" >> analysis/report.md
                     echo "### Testing Recommendations" >> analysis/report.md
@@ -157,7 +157,7 @@ Focus on missing edge cases, useful test organization, and CI-friendly recommend
 Return concise Markdown. Do not modify files.
 EOF
 
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "$(cat analysis/copilot-testing-prompt.txt)" 2>&1 | head -80 >> analysis/report.md || echo "Copilot CLI testing suggestions could not be completed" >> analysis/report.md
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-testing-prompt.txt)" 2>&1 | head -80 >> analysis/report.md
                 '''
             }
         }

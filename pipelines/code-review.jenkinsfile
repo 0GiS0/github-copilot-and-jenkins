@@ -72,7 +72,7 @@ File: $file
 $(head -100 "$file")
 EOF
 
-                        copilot --autopilot --yolo --max-autopilot-continues 3 --agent=code-review --prompt "$(cat reports/copilot-review-prompt.txt)" 2>&1 | head -120 >> reports/code-review.md || echo "Copilot CLI review could not be completed" >> reports/code-review.md
+                        copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat reports/copilot-review-prompt.txt)" 2>&1 | head -120 >> reports/code-review.md
                         echo '```' >> reports/code-review.md
                         echo "" >> reports/code-review.md
                         

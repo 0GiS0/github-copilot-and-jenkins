@@ -24,9 +24,9 @@ echo "✅ GitHub Copilot CLI installed successfully!"
 echo ""
 echo "🔧 Available commands:"
 echo "   copilot                         - Start an interactive session"
-echo "   copilot --agent=explore -p ...  - Run an agent prompt"
+echo "   copilot -p ...  - Run a prompt programmatically"
 echo ""
 echo "📖 Usage in Jenkins pipelines:"
-echo '   sh "copilot --agent=explore --prompt \"Analyze this repository\""'
+echo '   sh "copilot --prompt \"Analyze this repository\""'
 echo ""
 echo "🎉 Setup complete!"

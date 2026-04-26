@@ -80,7 +80,7 @@ pipeline {
                     # Use Copilot to generate installation instructions
                     echo "### Installation" >> docs/GENERATED_README.md
                     echo "" >> docs/GENERATED_README.md
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "Generate concise npm installation instructions for this TypeScript project. Return Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Generate concise npm installation instructions for this TypeScript project. Return Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
                         echo '```bash' >> docs/GENERATED_README.md
                         echo 'npm install' >> docs/GENERATED_README.md
                         echo 'npm run build' >> docs/GENERATED_README.md
@@ -91,7 +91,7 @@ pipeline {
                     # Use Copilot to explain project usage
                     echo "### Usage" >> docs/GENERATED_README.md
                     echo "" >> docs/GENERATED_README.md
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "Explain how to run this TypeScript Node.js project based on package.json. Return concise Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Explain how to run this TypeScript Node.js project based on package.json. Return concise Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
                         echo '```bash' >> docs/GENERATED_README.md
                         echo 'npm run dev' >> docs/GENERATED_README.md
                         echo '```' >> docs/GENERATED_README.md
@@ -127,7 +127,7 @@ pipeline {
                         grep -E "^export (async )?function" "$file" | while read -r func; do
                             echo "#### $func" >> docs/API.md
                             echo "" >> docs/API.md
-                            copilot --autopilot --yolo --max-autopilot-continues 3 --agent=explore --prompt "Document this TypeScript function signature in concise Markdown. Include purpose, parameters, and return value when inferable: $func" 2>&1 | head -40 >> docs/API.md || echo "Function documentation" >> docs/API.md
+                            copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Document this TypeScript function signature in concise Markdown. Include purpose, parameters, and return value when inferable: $func" 2>&1 | head -40 >> docs/API.md || echo "Function documentation" >> docs/API.md
                             echo "" >> docs/API.md
                         done
                         

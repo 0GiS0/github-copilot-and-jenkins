@@ -150,7 +150,7 @@ stage('Copilot Agent Analysis') {
     steps {
         withCredentials([string(credentialsId: 'gh-token', variable: 'COPILOT_GITHUB_TOKEN')]) {
             sh '''
-                copilot --agent=explore --prompt "Analyze this repository and summarize the main risks"
+                copilot --prompt "Analyze this repository and summarize the main risks"
             '''
         }
     }
@@ -165,7 +165,6 @@ stage('Copilot Agent Report') {
         withCredentials([string(credentialsId: 'gh-token', variable: 'COPILOT_GITHUB_TOKEN')]) {
             sh '''
                 copilot --autopilot --yolo --max-autopilot-continues 3 \
-                  --agent=explore \
                   --prompt "Review src/ and return concise Markdown recommendations"
             '''
         }
