@@ -346,6 +346,16 @@ body {
     margin: 0 auto;
     padding: 32px 24px 48px;
 }
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }
 .report-card {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -477,6 +487,7 @@ html = f"""<!doctype html>
 </head>
 <body>
     <main class="report-shell">
+        <a class="back-link" href="../../">&larr; Back to Jenkins build</a>
         <article class="report-card">
             <header class="report-header">
                 <h1>Project Analysis Report</h1>
