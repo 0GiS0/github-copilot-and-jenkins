@@ -252,7 +252,7 @@ def render_markdown(source: str) -> str:
         else:
             output.append(f'<p>{escape(stripped)}</p>')
     close_blocks()
-    return '\n'.join(output)
+    return '\\n'.join(output)
 
 body = render_markdown(markdown)
 html = f"""<!doctype html>
