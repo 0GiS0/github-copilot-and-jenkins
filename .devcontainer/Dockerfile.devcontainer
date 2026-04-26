@@ -1,7 +1,14 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 # Install useful tools (Node.js and GitHub CLI are installed via devcontainer features)
-RUN apt-get update && apt-get install -y jq curl wget \
+RUN apt-get update && apt-get install -y \
+    curl \
+    jq \
+    maven \
+    openjdk-17-jdk \
+    wget \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 WORKDIR /workspace

@@ -27,3 +27,4 @@ jenkins_home/
 # Build artifacts
 build/
 tmp/
+target/

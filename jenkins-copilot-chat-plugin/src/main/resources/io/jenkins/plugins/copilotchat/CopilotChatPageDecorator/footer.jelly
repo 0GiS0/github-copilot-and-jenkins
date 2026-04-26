@@ -1,0 +1,35 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core">
+  <link rel="stylesheet" href="${rootURL}/plugin/copilot-chat/copilot-chat.css" />
+  <div id="copilot-chat-widget" class="copilot-chat-widget" data-base-url="${rootURL}/copilot-chat">
+    <button id="copilot-chat-toggle" class="copilot-chat-toggle" type="button" aria-label="Copilot Chat" aria-expanded="false">
+      <img class="copilot-chat-toggle__icon" src="${rootURL}/plugin/copilot-chat/images/github-copilot-jenkins-logo.png" alt="" />
+    </button>
+    <section id="copilot-chat-panel" class="copilot-chat-panel" aria-label="Copilot Chat" hidden="hidden">
+      <header class="copilot-chat-header">
+        <div class="copilot-chat-title">
+          <img class="copilot-chat-title__logo" src="${rootURL}/plugin/copilot-chat/images/github-copilot-jenkins-logo.png" alt="" />
+          <div>
+            <strong>Copilot Chat</strong>
+            <span id="copilot-chat-auth-status" class="copilot-chat-status"></span>
+          </div>
+        </div>
+        <button id="copilot-chat-close" class="jenkins-button jenkins-button--tertiary" type="button" aria-label="Close">X</button>
+      </header>
+      <div class="copilot-chat-body">
+        <div id="copilot-chat-login" class="copilot-chat-login">
+          <button id="copilot-chat-login-button" class="jenkins-button jenkins-button--primary" type="button">Sign in with GitHub</button>
+          <button id="copilot-chat-logout-button" class="jenkins-button" type="button" hidden="hidden">Sign out</button>
+          <div id="copilot-chat-device-code" class="copilot-chat-device-code"></div>
+          <a id="copilot-chat-device-link" target="_blank" rel="noopener noreferrer"></a>
+        </div>
+        <div id="copilot-chat-messages" class="copilot-chat-messages" aria-live="polite"></div>
+      </div>
+      <form id="copilot-chat-form" class="copilot-chat-form" hidden="hidden">
+        <textarea id="copilot-chat-prompt" rows="3" placeholder="Ask Copilot about Jenkins"></textarea>
+        <button id="copilot-chat-send" class="jenkins-button jenkins-button--primary" type="submit">Send</button>
+      </form>
+    </section>
+  </div>
+  <script src="${rootURL}/plugin/copilot-chat/copilot-chat.js"></script>
+</j:jelly>
