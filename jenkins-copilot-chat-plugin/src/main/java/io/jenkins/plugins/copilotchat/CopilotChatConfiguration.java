@@ -12,8 +12,11 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     private String clientId;
     private String cliPath;
     private String defaultModel = DEFAULT_MODEL;
-    private String availableTools = "read_file,search_code,list_dir";
+    private String availableTools = "";
     private int requestTimeoutSeconds = 120;
+    private String jenkinsMcpUrl;
+    private String jenkinsMcpUsername = "admin";
+    private String jenkinsMcpToken = "admin";
 
     public CopilotChatConfiguration() {
         load();
@@ -72,6 +75,38 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     @DataBoundSetter
     public void setRequestTimeoutSeconds(int requestTimeoutSeconds) {
         this.requestTimeoutSeconds = requestTimeoutSeconds;
+        save();
+    }
+
+    @CheckForNull
+    public String getJenkinsMcpUrl() {
+        return jenkinsMcpUrl;
+    }
+
+    @DataBoundSetter
+    public void setJenkinsMcpUrl(String jenkinsMcpUrl) {
+        this.jenkinsMcpUrl = normalize(jenkinsMcpUrl);
+        save();
+    }
+
+    public String getJenkinsMcpUsername() {
+        return jenkinsMcpUsername == null || jenkinsMcpUsername.isBlank() ? "admin" : jenkinsMcpUsername;
+    }
+
+    @DataBoundSetter
+    public void setJenkinsMcpUsername(String jenkinsMcpUsername) {
+        this.jenkinsMcpUsername = normalize(jenkinsMcpUsername);
+        save();
+    }
+
+    @CheckForNull
+    public String getJenkinsMcpToken() {
+        return jenkinsMcpToken;
+    }
+
+    @DataBoundSetter
+    public void setJenkinsMcpToken(String jenkinsMcpToken) {
+        this.jenkinsMcpToken = normalize(jenkinsMcpToken);
         save();
     }
 

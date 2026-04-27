@@ -43,15 +43,47 @@
   color: var(--text-color, #24292f);
   display: flex;
   flex-direction: column;
-  max-height: min(680px, calc(100vh - 120px));
+  height: 640px;
+  max-height: calc(100vh - 120px);
+  max-width: calc(100vw - 32px);
+  min-height: 320px;
+  min-width: 320px;
   overflow: hidden;
   position: absolute;
   right: 0;
-  width: min(420px, calc(100vw - 32px));
+  width: 520px;
 }
 
 .copilot-chat-panel[hidden] {
   display: none;
+}
+
+.copilot-chat-resize-handle {
+  cursor: nwse-resize;
+  height: 18px;
+  left: 0;
+  position: absolute;
+  top: 0;
+  user-select: none;
+  width: 18px;
+  z-index: 2;
+}
+
+.copilot-chat-resize-handle::before {
+  border-left: 2px solid var(--copilot-chat-text-muted);
+  border-top: 2px solid var(--copilot-chat-text-muted);
+  border-top-left-radius: 6px;
+  content: "";
+  height: 10px;
+  left: 4px;
+  opacity: 0.6;
+  position: absolute;
+  top: 4px;
+  width: 10px;
+}
+
+.copilot-chat-resize-handle:hover::before {
+  opacity: 1;
 }
 
 .copilot-chat-header {
@@ -60,7 +92,36 @@
   display: flex;
   justify-content: space-between;
   min-height: 56px;
-  padding: 10px 12px 10px 16px;
+  padding: 10px 12px 10px 24px;
+}
+
+.copilot-chat-header__actions {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+.copilot-chat-icon-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--copilot-chat-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  width: 28px;
+}
+
+.copilot-chat-icon-button:hover {
+  background: var(--very-light-grey, #f3f4f6);
+  color: var(--text-color, #24292f);
+}
+
+.copilot-chat-icon-button[hidden] {
+  display: none !important;
 }
 
 .copilot-chat-title {
@@ -68,6 +129,19 @@
   display: flex;
   gap: 10px;
   min-width: 0;
+}
+
+.copilot-chat-title__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.copilot-chat-title__text strong {
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .copilot-chat-title__logo {
@@ -82,7 +156,7 @@
   color: var(--copilot-chat-text-muted);
   display: block;
   font-size: 12px;
-  margin-top: 2px;
+  margin-top: 0;
 }
 
 .copilot-chat-body {
@@ -139,11 +213,17 @@
   font-size: 12px;
 }
 
+.copilot-chat-message--error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
 .copilot-chat-form {
   border-top: 1px solid var(--copilot-chat-border);
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 1fr auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 12px;
 }
 
@@ -151,10 +231,74 @@
   display: none;
 }
 
+.copilot-chat-input {
+  align-items: flex-end;
+  background: var(--copilot-chat-surface);
+  border: 1px solid var(--copilot-chat-border);
+  border-radius: 10px;
+  display: flex;
+  gap: 6px;
+  padding: 8px 8px 8px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.copilot-chat-input:focus-within {
+  border-color: var(--button-background--primary, #0b6aa2);
+  box-shadow: 0 0 0 3px rgba(11, 106, 162, 0.18);
+}
+
 .copilot-chat-form textarea {
-  min-height: 68px;
-  resize: vertical;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  flex: 1;
+  font: inherit;
+  line-height: 1.4;
+  max-height: 180px;
+  min-height: 22px;
+  outline: none;
+  padding: 4px 0;
+  resize: none;
   width: 100%;
+}
+
+.copilot-chat-send {
+  align-items: center;
+  background: var(--button-background--primary, #0b6aa2);
+  border: 0;
+  border-radius: 8px;
+  color: var(--button-color--primary, #fff);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, transform 0.05s ease;
+  width: 32px;
+}
+
+.copilot-chat-send:hover:not(:disabled) {
+  background: #0959a8;
+}
+
+.copilot-chat-send:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.copilot-chat-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.copilot-chat-send svg {
+  display: block;
+}
+
+.copilot-chat-hint {
+  color: var(--copilot-chat-text-muted);
+  font-size: 11px;
+  padding: 0 4px;
 }
 
 @media (max-width: 520px) {

@@ -10,3 +10,4 @@ ansicolor
 timestamper
 ws-cleanup
 htmlpublisher
+mcp-server

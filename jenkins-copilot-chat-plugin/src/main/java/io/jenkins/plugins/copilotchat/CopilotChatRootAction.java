@@ -70,10 +70,15 @@ public class CopilotChatRootAction implements RootAction {
             return;
         }
         try {
-            String answer = chatService.send(requireUser(), CopilotChatConfiguration.get(), message.prompt()).get();
+            String answer = chatService.send(requireUser(), CopilotChatConfiguration.get(), message.prompt())
+                .get(120, java.util.concurrent.TimeUnit.SECONDS);
             json(Map.of("message", answer)).generateResponse(request, response, null);
+        } catch (java.util.concurrent.TimeoutException e) {
+            error("Copilot did not respond within 120 seconds. The session may be waiting for a tool permission. Try a simpler prompt.")
+                .generateResponse(request, response, null);
         } catch (Exception e) {
-            error(e.getMessage()).generateResponse(request, response, null);
+            String msg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            error(msg == null ? e.toString() : msg).generateResponse(request, response, null);
         }
     }
 

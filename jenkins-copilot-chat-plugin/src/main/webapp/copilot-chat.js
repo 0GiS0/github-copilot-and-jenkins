@@ -16,6 +16,20 @@
   const form = document.getElementById('copilot-chat-form');
   const messages = document.getElementById('copilot-chat-messages');
   const prompt = document.getElementById('copilot-chat-prompt');
+  const loginContainer = document.getElementById('copilot-chat-login');
+  const resizeHandle = document.getElementById('copilot-chat-resize-handle');
+  const sendButton = document.getElementById('copilot-chat-send');
+
+  function autoResize() {
+    prompt.style.height = 'auto';
+    prompt.style.height = `${Math.min(prompt.scrollHeight, 180)}px`;
+  }
+
+  function updateSendState() {
+    if (sendButton) {
+      sendButton.disabled = prompt.value.trim().length === 0;
+    }
+  }
 
   const base = (widget.dataset.baseUrl || '/copilot-chat').replace(/\/$/, '');
 
@@ -41,9 +55,9 @@
     loginButton.hidden = true;
     logoutButton.hidden = false;
     form.hidden = false;
-    loginButton.style.display = 'none';
-    logoutButton.style.display = '';
-    form.style.display = '';
+    if (loginContainer) {
+      loginContainer.hidden = true;
+    }
     deviceCode.textContent = '';
     deviceLink.textContent = '';
     deviceLink.removeAttribute('href');
@@ -54,9 +68,9 @@
     loginButton.hidden = false;
     logoutButton.hidden = true;
     form.hidden = true;
-    loginButton.style.display = '';
-    logoutButton.style.display = 'none';
-    form.style.display = 'none';
+    if (loginContainer) {
+      loginContainer.hidden = false;
+    }
   }
 
   async function refreshStatus() {
@@ -121,10 +135,22 @@
       return;
     }
     prompt.value = '';
+    autoResize();
+    updateSendState();
     addMessage('user', text);
     const pending = addMessage('assistant', 'Waiting for Copilot...');
-    const result = await post('sendMessage', { prompt: text });
-    pending.textContent = result.message || result.error || '';
+    try {
+      const result = await post('sendMessage', { prompt: text });
+      if (result.error) {
+        pending.textContent = `⚠ ${result.error}`;
+        pending.classList.add('copilot-chat-message--error');
+      } else {
+        pending.textContent = result.message || '(empty response)';
+      }
+    } catch (err) {
+      pending.textContent = `⚠ ${err.message || 'Network error'}`;
+      pending.classList.add('copilot-chat-message--error');
+    }
   }
 
   toggle.addEventListener('click', () => setOpen(panel.hidden));
@@ -132,6 +158,61 @@
   loginButton.addEventListener('click', startLogin);
   logoutButton.addEventListener('click', logout);
   form.addEventListener('submit', sendMessage);
+
+  prompt.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        sendMessage(event);
+      }
+    }
+  });
+
+  prompt.addEventListener('input', () => {
+    autoResize();
+    updateSendState();
+  });
+
+  updateSendState();
+
+  if (resizeHandle) {
+    let resizeState = null;
+
+    const onPointerMove = (event) => {
+      if (!resizeState) {
+        return;
+      }
+      const dx = resizeState.startX - event.clientX;
+      const dy = resizeState.startY - event.clientY;
+      const newWidth = Math.max(320, Math.min(window.innerWidth - 32, resizeState.startWidth + dx));
+      const newHeight = Math.max(320, Math.min(window.innerHeight - 120, resizeState.startHeight + dy));
+      panel.style.width = `${newWidth}px`;
+      panel.style.height = `${newHeight}px`;
+    };
+
+    const stopResize = () => {
+      resizeState = null;
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', stopResize);
+      document.body.style.userSelect = '';
+    };
+
+    resizeHandle.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      resizeState = {
+        startX: event.clientX,
+        startY: event.clientY,
+        startWidth: panel.offsetWidth,
+        startHeight: panel.offsetHeight
+      };
+      document.body.style.userSelect = 'none';
+      document.addEventListener('pointermove', onPointerMove);
+      document.addEventListener('pointerup', stopResize);
+    });
+  }
+
   refreshStatus().catch((error) => {
     status.textContent = error.message || 'Unable to load status';
   });

@@ -10,6 +10,7 @@ Repositorio de ejemplo que demuestra cómo integrar **GitHub Copilot CLI** dentr
 
 - **Dev Container** preconfigurado con Jenkins y todas las dependencias
 - **Jenkins Configuration as Code (JCasC)** para setup automático
+- **Plugin [MCP Server](https://plugins.jenkins.io/mcp-server/)** preinstalado para conectar GitHub Copilot Chat con Jenkins vía Model Context Protocol
 - **3 pipelines de demostración** usando Copilot CLI:
   - 📝 Code Review automático
   - 📚 Generación de documentación
@@ -72,6 +73,40 @@ Una vez levantado el Dev Container:
 - **URL**: http://localhost:8081
 - **Usuario**: `admin`
 - **Contraseña**: `admin`
+
+### 4. Conectar GitHub Copilot Chat al MCP Server de Jenkins
+
+El Dev Container instala automáticamente el plugin [MCP Server](https://plugins.jenkins.io/mcp-server/), que expone Jenkins como un servidor [Model Context Protocol](https://modelcontextprotocol.io/). Esto permite a GitHub Copilot Chat consultar y operar Jenkins (jobs, builds, logs, etc.) directamente desde el editor con lenguaje natural.
+
+La configuración ya está incluida en [.vscode/mcp.json](.vscode/mcp.json) y usa el endpoint **stateless** (HTTP plano, sin sesiones) que funciona de forma fiable dentro del Dev Container:
+
+```
+http://jenkins:8080/mcp-server/stateless
+```
+
+> Por qué stateless en lugar de SSE: el endpoint SSE devuelve, durante el handshake, una URL de mensajes basada en el campo *Jenkins URL* de la configuración (`http://localhost:8081/...`), que no se resuelve desde dentro del Dev Container. El endpoint stateless usa una sola URL y evita ese problema.
+
+**Pasos para activarlo:**
+
+1. **Genera un API token de Jenkins** (la contraseña también funciona, pero el token es lo recomendado):
+   - Entra en http://localhost:8081 con `admin` / `admin`
+   - Pulsa tu nombre de usuario (arriba a la derecha) → **Security** → **Add new token** → ponle un nombre (ej. `mcp-copilot`) → **Generate** → copia el valor.
+
+2. **Codifica las credenciales en Base64**:
+
+   ```bash
+   echo -n "admin:TU_API_TOKEN" | base64
+   ```
+
+3. En VS Code: paleta de comandos (`Cmd/Ctrl + Shift + P`) → **MCP: List Servers** → `jenkins` → **Start Server**. Cuando se te pida la credencial, pega el valor base64 anterior.
+
+4. Abre Copilot Chat en modo **Agent** y prueba prompts como:
+   - "Lista los jobs disponibles en Jenkins"
+   - "Dame el estado del último build de `main-pipeline`"
+   - "Muéstrame las últimas 50 líneas del log del último build de `copilot-demos/code-analysis`"
+   - "Lanza el job `copilot-demos/code-review`"
+
+> ℹ️ El plugin requiere Jenkins 2.533+. La imagen base `jenkins/jenkins:lts` ya cumple este requisito.
 
 ## 📁 Estructura del Proyecto
 

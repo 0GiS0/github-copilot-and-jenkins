@@ -1,5 +1,5 @@
 {
-  "name": "🤖 GitHub Copilot and 👨🏻 Jenkins Demo",
+  "name": "🤖 GitHub Copilot and 👨🏻‍💻 Jenkins Demo",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
