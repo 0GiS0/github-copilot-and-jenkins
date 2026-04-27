@@ -6,20 +6,30 @@ import com.github.copilot.sdk.generated.AssistantMessageDeltaEvent;
 import com.github.copilot.sdk.generated.AssistantMessageEvent;
 import com.github.copilot.sdk.generated.SessionErrorEvent;
 import com.github.copilot.sdk.generated.SessionIdleEvent;
+import com.github.copilot.sdk.generated.rpc.McpConfigAddParams;
+import com.github.copilot.sdk.generated.rpc.SessionMcpEnableParams;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.PermissionHandler;
-import com.github.copilot.sdk.json.PermissionRequestResult;
-import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.SessionConfig;
+import com.github.copilot.sdk.json.SystemMessageConfig;
 import hudson.model.User;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import jenkins.model.Jenkins;
 
 public class CopilotChatSessionService {
+    private static final Logger LOGGER = Logger.getLogger(CopilotChatSessionService.class.getName());
+    private static final String JENKINS_MCP_SERVER_NAME = "jenkins";
+
     private final CopilotClientFactory clientFactory;
     private final ConcurrentMap<String, UserChatSession> sessions = new ConcurrentHashMap<>();
 
@@ -53,17 +63,18 @@ public class CopilotChatSessionService {
             try {
                 CopilotClient client = clientFactory.createFor(user, configuration);
                 client.start().get();
-                PermissionHandler denyAll = (request, invocation) -> CompletableFuture.completedFuture(
-                    new PermissionRequestResult().setKind(PermissionRequestResultKind.DENIED_BY_RULES));
+                registerJenkinsMcpServer(client, configuration);
                 SessionConfig sessionConfig = new SessionConfig()
-                    .setOnPermissionRequest(denyAll)
+                    .setOnPermissionRequest(PermissionHandler.APPROVE_ALL)
                         .setModel(configuration.getDefaultModel())
-                        .setStreaming(true);
+                        .setStreaming(true)
+                        .setSystemMessage(new SystemMessageConfig().setContent(buildSystemMessage()));
                 List<String> availableTools = parseTools(configuration.getAvailableTools());
                 if (!availableTools.isEmpty()) {
                     sessionConfig.setAvailableTools(availableTools);
                 }
                 CopilotSession session = client.createSession(sessionConfig).get();
+                enableJenkinsMcpForSession(session);
                 UserChatSession created = new UserChatSession(client, session);
                 UserChatSession previous = sessions.putIfAbsent(user.getId(), created);
                 return previous == null ? created : previous;
@@ -71,6 +82,64 @@ public class CopilotChatSessionService {
                 throw new IllegalStateException("Could not start Copilot chat session", e);
             }
         });
+    }
+
+    private void registerJenkinsMcpServer(CopilotClient client, CopilotChatConfiguration configuration) {
+        try {
+            Map<String, Object> serverConfig = new LinkedHashMap<>();
+            serverConfig.put("type", "http");
+            serverConfig.put("url", buildJenkinsMcpUrl(configuration));
+            String auth = buildJenkinsAuthHeader(configuration);
+            if (auth != null) {
+                Map<String, String> headers = new LinkedHashMap<>();
+                headers.put("Authorization", auth);
+                serverConfig.put("headers", headers);
+            }
+            client.getRpc().mcp.config.add(new McpConfigAddParams(JENKINS_MCP_SERVER_NAME, serverConfig)).get();
+            LOGGER.log(Level.FINE, "Registered Jenkins MCP server with Copilot client");
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not register Jenkins MCP server: " + e.getMessage(), e);
+        }
+    }
+
+    private void enableJenkinsMcpForSession(CopilotSession session) {
+        try {
+            session.getRpc().mcp.enable(new SessionMcpEnableParams(session.getSessionId(), JENKINS_MCP_SERVER_NAME)).get();
+            LOGGER.log(Level.FINE, "Enabled Jenkins MCP server for Copilot session");
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Could not enable Jenkins MCP server in session: " + e.getMessage(), e);
+        }
+    }
+
+    private static String buildJenkinsMcpUrl(CopilotChatConfiguration configuration) {
+        String configured = configuration.getJenkinsMcpUrl();
+        if (configured != null && !configured.isBlank()) {
+            return configured;
+        }
+        return "http://localhost:8080/mcp-server/stateless";
+    }
+
+    private static String buildJenkinsAuthHeader(CopilotChatConfiguration configuration) {
+        String username = configuration.getJenkinsMcpUsername();
+        String token = configuration.getJenkinsMcpToken();
+        if (username == null || username.isBlank() || token == null || token.isBlank()) {
+            return null;
+        }
+        String raw = username + ":" + token;
+        return "Basic " + Base64.getEncoder().encodeToString(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    private static String buildSystemMessage() {
+        String url = Jenkins.get().getRootUrl();
+        return "You are GitHub Copilot embedded inside a Jenkins instance"
+                + (url != null ? " at " + url : "")
+                + ". You have access to a Jenkins MCP server (registered as 'jenkins') that exposes tools to query and operate this Jenkins instance: "
+                + "getJobs, getJob, getBuild, getBuildLog, searchBuildLog, getTestResults, triggerBuild, getQueueItem, "
+                + "getJobScm, getBuildScm, getBuildChangeSets, findJobsWithScmUrl, whoAmI, getStatus, updateBuild, "
+                + "rebuildBuild, replayBuild, getReplayScripts. "
+                + "Always prefer calling these tools to answer the user's questions about Jenkins (jobs, builds, logs, status). "
+                + "Be concise and use Markdown to format responses. "
+                + "Job names inside folders use the form 'folder/job' (for example 'copilot-demos/code-analysis').";
     }
 
     private static List<String> parseTools(String value) {
