@@ -20,7 +20,8 @@
         "ms-azuretools.vscode-docker",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "GitHub.copilot"
+        "GitHub.copilot",
+        "vscjava.vscode-java-pack"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"

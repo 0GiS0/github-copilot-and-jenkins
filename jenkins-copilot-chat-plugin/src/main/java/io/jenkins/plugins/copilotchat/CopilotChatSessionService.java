@@ -6,10 +6,14 @@ import com.github.copilot.sdk.generated.AssistantMessageDeltaEvent;
 import com.github.copilot.sdk.generated.AssistantMessageEvent;
 import com.github.copilot.sdk.generated.SessionErrorEvent;
 import com.github.copilot.sdk.generated.SessionIdleEvent;
-import com.github.copilot.sdk.generated.rpc.McpConfigAddParams;
-import com.github.copilot.sdk.generated.rpc.SessionMcpEnableParams;
+import com.github.copilot.sdk.generated.SessionMcpServersLoadedEvent;
+import com.github.copilot.sdk.json.McpHttpServerConfig;
+import com.github.copilot.sdk.json.McpServerConfig;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.PermissionHandler;
+import com.github.copilot.sdk.json.PermissionRequest;
+import com.github.copilot.sdk.json.PermissionRequestResult;
+import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.SystemMessageConfig;
 import hudson.model.User;
@@ -21,6 +25,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -63,18 +69,35 @@ public class CopilotChatSessionService {
             try {
                 CopilotClient client = clientFactory.createFor(user, configuration);
                 client.start().get();
-                registerJenkinsMcpServer(client, configuration);
+                PermissionHandler approveAll = (request, invocation) ->
+                    CompletableFuture.completedFuture(
+                        new PermissionRequestResult()
+                            .setKind("approve-once")
+                            .setRules(List.of()));
                 SessionConfig sessionConfig = new SessionConfig()
-                    .setOnPermissionRequest(PermissionHandler.APPROVE_ALL)
+                    .setOnPermissionRequest(approveAll)
                         .setModel(configuration.getDefaultModel())
                         .setStreaming(true)
                         .setSystemMessage(new SystemMessageConfig().setContent(buildSystemMessage()));
+                Map<String, McpServerConfig> mcpServers = buildMcpServers(configuration);
+                if (!mcpServers.isEmpty()) {
+                    sessionConfig.setMcpServers(mcpServers);
+                }
                 List<String> availableTools = parseTools(configuration.getAvailableTools());
                 if (!availableTools.isEmpty()) {
                     sessionConfig.setAvailableTools(availableTools);
                 }
                 CopilotSession session = client.createSession(sessionConfig).get();
-                enableJenkinsMcpForSession(session);
+                // Wait for MCP servers to load before allowing sends
+                if (!mcpServers.isEmpty()) {
+                    CountDownLatch mcpReady = new CountDownLatch(1);
+                    session.on(SessionMcpServersLoadedEvent.class, event -> mcpReady.countDown());
+                    if (!mcpReady.await(30, TimeUnit.SECONDS)) {
+                        LOGGER.log(Level.WARNING, "Timed out waiting for MCP servers to load");
+                    } else {
+                        LOGGER.log(Level.INFO, "MCP servers loaded successfully");
+                    }
+                }
                 UserChatSession created = new UserChatSession(client, session);
                 UserChatSession previous = sessions.putIfAbsent(user.getId(), created);
                 return previous == null ? created : previous;
@@ -84,31 +107,19 @@ public class CopilotChatSessionService {
         });
     }
 
-    private void registerJenkinsMcpServer(CopilotClient client, CopilotChatConfiguration configuration) {
-        try {
-            Map<String, Object> serverConfig = new LinkedHashMap<>();
-            serverConfig.put("type", "http");
-            serverConfig.put("url", buildJenkinsMcpUrl(configuration));
-            String auth = buildJenkinsAuthHeader(configuration);
-            if (auth != null) {
-                Map<String, String> headers = new LinkedHashMap<>();
-                headers.put("Authorization", auth);
-                serverConfig.put("headers", headers);
-            }
-            client.getRpc().mcp.config.add(new McpConfigAddParams(JENKINS_MCP_SERVER_NAME, serverConfig)).get();
-            LOGGER.log(Level.FINE, "Registered Jenkins MCP server with Copilot client");
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Could not register Jenkins MCP server: " + e.getMessage(), e);
+    private static Map<String, McpServerConfig> buildMcpServers(CopilotChatConfiguration configuration) {
+        Map<String, McpServerConfig> servers = new LinkedHashMap<>();
+        McpHttpServerConfig jenkins = new McpHttpServerConfig()
+                .setUrl(buildJenkinsMcpUrl(configuration));
+        jenkins.setTools(List.of("*"));
+        String auth = buildJenkinsAuthHeader(configuration);
+        if (auth != null) {
+            Map<String, String> headers = new LinkedHashMap<>();
+            headers.put("Authorization", auth);
+            jenkins.setHeaders(headers);
         }
-    }
-
-    private void enableJenkinsMcpForSession(CopilotSession session) {
-        try {
-            session.getRpc().mcp.enable(new SessionMcpEnableParams(session.getSessionId(), JENKINS_MCP_SERVER_NAME)).get();
-            LOGGER.log(Level.FINE, "Enabled Jenkins MCP server for Copilot session");
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Could not enable Jenkins MCP server in session: " + e.getMessage(), e);
-        }
+        servers.put(JENKINS_MCP_SERVER_NAME, jenkins);
+        return servers;
     }
 
     private static String buildJenkinsMcpUrl(CopilotChatConfiguration configuration) {
