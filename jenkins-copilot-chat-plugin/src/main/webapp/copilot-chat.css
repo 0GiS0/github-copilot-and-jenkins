@@ -531,6 +531,44 @@
   50% { opacity: 0; }
 }
 
+/* Reasoning/thinking block */
+.copilot-chat-reasoning {
+  background: var(--copilot-chat-surface-subtle, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--copilot-chat-border, #d0d7de);
+  border-radius: 6px;
+  font-size: 0.85em;
+  margin-bottom: 12px;
+  padding: 0;
+}
+
+.copilot-chat-reasoning summary {
+  color: var(--copilot-chat-text-muted, #656d76);
+  cursor: pointer;
+  font-weight: 500;
+  padding: 8px 12px;
+  user-select: none;
+}
+
+.copilot-chat-reasoning summary:hover {
+  color: var(--text-color, #24292f);
+}
+
+.copilot-chat-reasoning[open] summary {
+  border-bottom: 1px solid var(--copilot-chat-border, #d0d7de);
+}
+
+.copilot-chat-reasoning__content {
+  color: var(--copilot-chat-text-muted, #656d76);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9em;
+  line-height: 1.5;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Markdown styles */
 .copilot-chat-message--markdown h1,
 .copilot-chat-message--markdown h2,

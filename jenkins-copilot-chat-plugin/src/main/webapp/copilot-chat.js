@@ -340,6 +340,9 @@
       }
 
       let fullContent = '';
+      let reasoningContent = '';
+      let reasoningBlock = null;
+      let hasStartedResponse = false;
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -367,9 +370,43 @@
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              if (data.type === 'delta') {
+              if (data.type === 'reasoning') {
+                // Create reasoning block if it doesn't exist
+                if (!reasoningBlock) {
+                  reasoningBlock = document.createElement('details');
+                  reasoningBlock.className = 'copilot-chat-reasoning';
+                  reasoningBlock.open = true;
+                  const summary = document.createElement('summary');
+                  summary.textContent = '💭 Thinking...';
+                  reasoningBlock.appendChild(summary);
+                  const content = document.createElement('div');
+                  content.className = 'copilot-chat-reasoning__content';
+                  reasoningBlock.appendChild(content);
+                  pending.insertBefore(reasoningBlock, cursor);
+                }
+                reasoningContent += data.content;
+                const content = reasoningBlock.querySelector('.copilot-chat-reasoning__content');
+                content.textContent = reasoningContent;
+                messages.scrollTop = messages.scrollHeight;
+              } else if (data.type === 'delta') {
+                // Collapse reasoning block when response starts
+                if (reasoningBlock && !hasStartedResponse) {
+                  reasoningBlock.open = false;
+                  const summary = reasoningBlock.querySelector('summary');
+                  if (summary) summary.textContent = '💭 Show thinking';
+                  hasStartedResponse = true;
+                }
                 fullContent += data.content;
-                pending.innerHTML = renderMarkdown(fullContent);
+                // Rebuild pending content with reasoning block + response
+                if (reasoningBlock) {
+                  pending.innerHTML = '';
+                  pending.appendChild(reasoningBlock);
+                  const responseDiv = document.createElement('div');
+                  responseDiv.innerHTML = renderMarkdown(fullContent);
+                  pending.appendChild(responseDiv);
+                } else {
+                  pending.innerHTML = renderMarkdown(fullContent);
+                }
                 pending.appendChild(cursor);
                 messages.scrollTop = messages.scrollHeight;
               } else if (data.type === 'complete') {

@@ -124,6 +124,17 @@ public class CopilotChatRootAction implements RootAction {
                             throw new java.io.UncheckedIOException(new java.io.IOException(ex));
                         }
                     },
+                    // Reasoning consumer - send thinking/reasoning as SSE event
+                    reasoning -> {
+                        try {
+                            writer.write("data: ");
+                            writer.write(objectMapper.writeValueAsString(Map.of("type", "reasoning", "content", reasoning)));
+                            writer.write("\n\n");
+                            writer.flush();
+                        } catch (Exception ex) {
+                            throw new java.io.UncheckedIOException(new java.io.IOException(ex));
+                        }
+                    },
                     // Complete consumer - send final complete event
                     complete -> {
                         try {

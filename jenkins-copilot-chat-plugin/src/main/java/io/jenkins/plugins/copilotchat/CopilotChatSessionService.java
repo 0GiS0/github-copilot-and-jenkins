@@ -4,6 +4,7 @@ import com.github.copilot.sdk.CopilotClient;
 import com.github.copilot.sdk.CopilotSession;
 import com.github.copilot.sdk.generated.AssistantMessageDeltaEvent;
 import com.github.copilot.sdk.generated.AssistantMessageEvent;
+import com.github.copilot.sdk.generated.AssistantReasoningEvent;
 import com.github.copilot.sdk.generated.SessionErrorEvent;
 import com.github.copilot.sdk.generated.SessionIdleEvent;
 import com.github.copilot.sdk.generated.SessionMcpServersLoadedEvent;
@@ -97,11 +98,17 @@ public class CopilotChatSessionService {
         });
     }
 
-    public CompletableFuture<Void> sendStream(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, String model, Consumer<String> deltaConsumer, Consumer<String> completeConsumer, Consumer<Throwable> errorConsumer) {
+    public CompletableFuture<Void> sendStream(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, String model, Consumer<String> deltaConsumer, Consumer<String> reasoningConsumer, Consumer<String> completeConsumer, Consumer<Throwable> errorConsumer) {
         String effectiveModel = (model != null && !model.isBlank()) ? model : configuration.getDefaultModel();
         return getOrCreateSession(user, configuration, effectiveModel).thenCompose(session -> {
             CompletableFuture<Void> done = new CompletableFuture<>();
             List<Closeable> listeners = new java.util.ArrayList<>();
+            listeners.add(session.session().on(AssistantReasoningEvent.class, event -> {
+                String content = event.getData().content();
+                if (content != null && !content.isEmpty()) {
+                    reasoningConsumer.accept(content);
+                }
+            }));
             listeners.add(session.session().on(AssistantMessageDeltaEvent.class, event -> {
                 String delta = event.getData().deltaContent();
                 if (delta != null && !delta.isEmpty()) {
