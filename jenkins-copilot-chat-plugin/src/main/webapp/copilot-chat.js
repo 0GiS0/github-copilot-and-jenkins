@@ -21,6 +21,10 @@
   const loginContainer = document.getElementById('copilot-chat-login');
   const resizeHandle = document.getElementById('copilot-chat-resize-handle');
   const sendButton = document.getElementById('copilot-chat-send');
+  const fullscreenButton = document.getElementById('copilot-chat-fullscreen');
+  const fullscreenExpandIcon = document.getElementById('copilot-chat-fullscreen-expand');
+  const fullscreenCollapseIcon = document.getElementById('copilot-chat-fullscreen-collapse');
+  let isFullscreen = false;
 
   // Load markdown library
   const script = document.createElement('script');
@@ -393,8 +397,28 @@
     }
   }
 
+  function toggleFullscreen(enable) {
+    isFullscreen = enable !== undefined ? enable : !isFullscreen;
+    panel.classList.toggle('copilot-chat-panel--fullscreen', isFullscreen);
+    if (fullscreenExpandIcon) fullscreenExpandIcon.hidden = isFullscreen;
+    if (fullscreenCollapseIcon) fullscreenCollapseIcon.hidden = !isFullscreen;
+    fullscreenButton.title = isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen';
+    fullscreenButton.setAttribute('aria-label', fullscreenButton.title);
+  }
+
   toggle.addEventListener('click', () => setOpen(panel.hidden));
-  closeButton.addEventListener('click', () => setOpen(false));
+  closeButton.addEventListener('click', () => {
+    if (isFullscreen) toggleFullscreen(false);
+    setOpen(false);
+  });
+  if (fullscreenButton) {
+    fullscreenButton.addEventListener('click', () => toggleFullscreen());
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isFullscreen && !panel.hidden) {
+      toggleFullscreen(false);
+    }
+  });
   loginButton.addEventListener('click', startLogin);
   logoutButton.addEventListener('click', logout);
   form.addEventListener('submit', sendMessage);
