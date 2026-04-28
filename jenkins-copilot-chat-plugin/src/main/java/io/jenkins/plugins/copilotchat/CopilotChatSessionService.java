@@ -10,6 +10,7 @@ import com.github.copilot.sdk.generated.SessionMcpServersLoadedEvent;
 import com.github.copilot.sdk.json.McpHttpServerConfig;
 import com.github.copilot.sdk.json.McpServerConfig;
 import com.github.copilot.sdk.json.MessageOptions;
+import com.github.copilot.sdk.json.ModelInfo;
 import com.github.copilot.sdk.json.PermissionHandler;
 import com.github.copilot.sdk.json.PermissionRequest;
 import com.github.copilot.sdk.json.PermissionRequestResult;
@@ -47,8 +48,32 @@ public class CopilotChatSessionService {
         this.clientFactory = clientFactory;
     }
 
-    public CompletableFuture<String> send(User user, CopilotChatConfiguration configuration, String prompt, String pagePath) {
-        return getOrCreateSession(user, configuration).thenCompose(session -> {
+    /**
+     * List available models for the user.
+     * Uses an existing session's client if available, otherwise creates a temporary client.
+     */
+    public CompletableFuture<List<ModelInfo>> listModels(User user, CopilotChatConfiguration configuration) {
+        UserChatSession existing = sessions.get(user.getId());
+        if (existing != null) {
+            return existing.client().listModels();
+        }
+        // No existing session - create a temporary client just for listing models
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                CopilotClient client = clientFactory.createFor(user, configuration);
+                client.start().get(30, TimeUnit.SECONDS);
+                List<ModelInfo> models = client.listModels().get(30, TimeUnit.SECONDS);
+                client.stop();
+                return models;
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to list models: " + e.getMessage(), e);
+            }
+        });
+    }
+
+    public CompletableFuture<String> send(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, String model) {
+        String effectiveModel = (model != null && !model.isBlank()) ? model : configuration.getDefaultModel();
+        return getOrCreateSession(user, configuration, effectiveModel).thenCompose(session -> {
             StringBuilder response = new StringBuilder();
             CompletableFuture<String> done = new CompletableFuture<>();
             List<Closeable> listeners = new java.util.ArrayList<>();
@@ -72,8 +97,9 @@ public class CopilotChatSessionService {
         });
     }
 
-    public CompletableFuture<Void> sendStream(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, Consumer<String> deltaConsumer, Consumer<String> completeConsumer, Consumer<Throwable> errorConsumer) {
-        return getOrCreateSession(user, configuration).thenCompose(session -> {
+    public CompletableFuture<Void> sendStream(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, String model, Consumer<String> deltaConsumer, Consumer<String> completeConsumer, Consumer<Throwable> errorConsumer) {
+        String effectiveModel = (model != null && !model.isBlank()) ? model : configuration.getDefaultModel();
+        return getOrCreateSession(user, configuration, effectiveModel).thenCompose(session -> {
             CompletableFuture<Void> done = new CompletableFuture<>();
             List<Closeable> listeners = new java.util.ArrayList<>();
             listeners.add(session.session().on(AssistantMessageDeltaEvent.class, event -> {
@@ -120,11 +146,18 @@ public class CopilotChatSessionService {
         return "[Jenkins page context: " + pagePath + "]\n\n" + prompt;
     }
 
-    private CompletableFuture<UserChatSession> getOrCreateSession(User user, CopilotChatConfiguration configuration) {
+    private CompletableFuture<UserChatSession> getOrCreateSession(User user, CopilotChatConfiguration configuration, String model) {
         UserChatSession existing = sessions.get(user.getId());
+        // If session exists but uses a different model, invalidate it
+        if (existing != null && !model.equals(existing.model())) {
+            LOGGER.log(Level.INFO, "Model changed from {0} to {1}, recreating session", new Object[]{existing.model(), model});
+            invalidateSession(user);
+            existing = null;
+        }
         if (existing != null) {
             return CompletableFuture.completedFuture(existing);
         }
+        final String effectiveModel = model;
         return CompletableFuture.supplyAsync(() -> {
             try {
                 CopilotClient client = clientFactory.createFor(user, configuration);
@@ -136,7 +169,7 @@ public class CopilotChatSessionService {
                             .setRules(List.of()));
                 SessionConfig sessionConfig = new SessionConfig()
                     .setOnPermissionRequest(approveAll)
-                        .setModel(configuration.getDefaultModel())
+                        .setModel(effectiveModel)
                         .setStreaming(true)
                         .setSystemMessage(new SystemMessageConfig().setContent(buildSystemMessage()));
                 Map<String, McpServerConfig> mcpServers = buildMcpServers(configuration);
@@ -158,7 +191,7 @@ public class CopilotChatSessionService {
                         LOGGER.log(Level.INFO, "MCP servers loaded successfully");
                     }
                 }
-                UserChatSession created = new UserChatSession(client, session);
+                UserChatSession created = new UserChatSession(client, session, effectiveModel);
                 UserChatSession previous = sessions.putIfAbsent(user.getId(), created);
                 return previous == null ? created : previous;
             } catch (Exception e) {
@@ -243,5 +276,19 @@ public class CopilotChatSessionService {
                 .collect(Collectors.toList());
     }
 
-    private record UserChatSession(CopilotClient client, CopilotSession session) {}
+    /**
+     * Invalidate the session for a user, forcing a new session to be created on the next request.
+     */
+    public void invalidateSession(User user) {
+        UserChatSession removed = sessions.remove(user.getId());
+        if (removed != null) {
+            try {
+                removed.client().stop();
+            } catch (Exception e) {
+                LOGGER.log(Level.FINE, "Error stopping client during session invalidation", e);
+            }
+        }
+    }
+
+    private record UserChatSession(CopilotClient client, CopilotSession session, String model) {}
 }

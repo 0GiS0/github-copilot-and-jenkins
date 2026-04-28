@@ -47,6 +47,55 @@
   const copilotLogoUrl = `${pluginBase}/images/github-copilot-jenkins-logo.png`;
   let currentUserAvatar = '';
   let currentUserLogin = '';
+  let selectedModel = localStorage.getItem('copilot-chat-model') || '';
+  let availableModels = [];
+
+  // Get model selector from DOM
+  const modelSelector = document.getElementById('copilot-chat-model-selector');
+
+  if (modelSelector) {
+    modelSelector.addEventListener('change', () => {
+      selectedModel = modelSelector.value;
+      localStorage.setItem('copilot-chat-model', selectedModel);
+    });
+  }
+
+  async function loadModels() {
+    if (!modelSelector) return;
+    try {
+      const result = await post('models');
+      if (result.error) {
+        console.error('Failed to load models:', result.error);
+        modelSelector.innerHTML = '<option value="">Default model</option>';
+        modelSelector.hidden = false;
+        return;
+      }
+      availableModels = result.models || [];
+      const defaultModel = result.defaultModel || '';
+      
+      modelSelector.innerHTML = '';
+      availableModels.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name || model.id;
+        if (selectedModel === model.id || (!selectedModel && model.id === defaultModel)) {
+          option.selected = true;
+          selectedModel = model.id;
+        }
+        modelSelector.appendChild(option);
+      });
+      
+      if (availableModels.length === 0) {
+        modelSelector.innerHTML = '<option value="">Default model</option>';
+      }
+      
+      modelSelector.hidden = false;
+    } catch (err) {
+      console.error('Error loading models:', err);
+      modelSelector.innerHTML = '<option value="">Default model</option>';
+      modelSelector.hidden = false;
+    }
+  }
 
   async function post(path, body) {
     const response = await fetch(`${base}/${path}`, {
@@ -81,6 +130,7 @@
     deviceCode.textContent = '';
     deviceLink.textContent = '';
     deviceLink.removeAttribute('href');
+    loadModels();
   }
 
   function setLoggedOut() {
@@ -88,6 +138,7 @@
     loginButton.hidden = false;
     logoutButton.hidden = true;
     form.hidden = true;
+    modelSelector.hidden = true;
     if (loginContainer) {
       loginContainer.hidden = false;
     }
@@ -274,7 +325,7 @@
       const response = await fetch(`${base}/sendMessage`, {
         method: 'POST',
         headers: crumbHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ prompt: text, pagePath: window.location.pathname })
+        body: JSON.stringify({ prompt: text, pagePath: window.location.pathname, model: selectedModel || null })
       });
 
       if (!response.ok) {

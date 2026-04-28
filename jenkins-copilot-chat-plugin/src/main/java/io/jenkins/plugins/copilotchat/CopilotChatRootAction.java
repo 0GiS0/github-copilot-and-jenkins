@@ -1,12 +1,15 @@
 package io.jenkins.plugins.copilotchat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.copilot.sdk.json.ModelInfo;
 import hudson.Extension;
 import hudson.model.RootAction;
 import hudson.model.User;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.QueryParameter;
@@ -69,6 +72,30 @@ public class CopilotChatRootAction implements RootAction {
         return json(Map.of("authenticated", false));
     }
 
+    public HttpResponse doModels() {
+        Jenkins.get().checkPermission(Jenkins.READ);
+        try {
+            List<ModelInfo> models = chatService.listModels(requireUser(), CopilotChatConfiguration.get())
+                    .get(30, TimeUnit.SECONDS);
+            String defaultModel = CopilotChatConfiguration.get().getDefaultModel();
+            // Convert to simpler format for JSON serialization
+            List<Map<String, Object>> modelList = models.stream()
+                    .map(m -> Map.<String, Object>of(
+                            "id", m.getId(),
+                            "name", m.getName() != null ? m.getName() : m.getId()))
+                    .toList();
+            return json(Map.of(
+                "models", modelList,
+                "defaultModel", defaultModel
+            ));
+        } catch (IllegalStateException e) {
+            return error(e.getMessage());
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Failed to fetch models";
+            return error(msg);
+        }
+    }
+
     public void doSendMessage(StaplerRequest2 request, StaplerResponse2 response) throws IOException, ServletException {
         Jenkins.get().checkPermission(Jenkins.READ);
         MessageRequest message = objectMapper.readValue(request.getInputStream(), MessageRequest.class);
@@ -85,6 +112,7 @@ public class CopilotChatRootAction implements RootAction {
                     CopilotChatConfiguration.get(),
                     message.prompt(),
                     message.pagePath(),
+                    message.model(),
                     // Delta consumer - send each chunk as SSE event
                     delta -> {
                         try {
