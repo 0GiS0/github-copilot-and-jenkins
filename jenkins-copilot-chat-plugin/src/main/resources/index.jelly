@@ -1,2 +1,5 @@
 <?jelly escape-by-default='true'?>
-<div />
+<div>
+    Jenkins UI chat integration for GitHub Copilot using OAuth Device Flow.
+</div>
+</div>

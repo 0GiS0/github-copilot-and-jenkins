@@ -7,7 +7,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 
 @Extension
 public class CopilotChatConfiguration extends GlobalConfiguration {
-    private static final String DEFAULT_MODEL = "gpt-4.1";
+    private static final String DEFAULT_MODEL = "gpt-5.4";
 
     private String clientId;
     private String cliPath;

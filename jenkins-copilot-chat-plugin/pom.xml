@@ -8,7 +8,7 @@
   <packaging>hpi</packaging>
 
   <name>Copilot Chat</name>
-  <description>Jenkins UI chat integration for GitHub Copilot using OAuth Device Flow.</description>
+  <!-- description is in src/main/resources/index.jelly -->
   <url>https://github.com/jenkinsci/copilot-chat-plugin</url>
 
   <scm>

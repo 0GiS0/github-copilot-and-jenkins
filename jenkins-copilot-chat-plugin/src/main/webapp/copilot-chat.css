@@ -278,34 +278,91 @@
 .copilot-chat-messages {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+}
+
+/* Message row with avatar */
+.copilot-chat-message-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.copilot-chat-message-row--user {
+  flex-direction: row-reverse;
+}
+
+.copilot-chat-message-row--system {
+  justify-content: center;
+}
+
+/* Avatars */
+.copilot-chat-avatar {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.copilot-chat-avatar__img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.copilot-chat-avatar__img--pulse {
+  animation: copilot-avatar-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes copilot-avatar-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.9); filter: brightness(1.3); }
+}
+
+.copilot-chat-avatar__initials {
+  align-items: center;
+  background: var(--button-background--primary, #0b6aa2);
+  border-radius: 50%;
+  color: white;
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
 }
 
 .copilot-chat-message {
   border: 1px solid var(--copilot-chat-border);
-  border-radius: 8px;
-  line-height: 1.45;
-  max-width: 100%;
-  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.5;
+  max-width: 85%;
+  padding: 8px 12px;
   white-space: pre-wrap;
   word-break: break-word;
+  font-size: 13px;
 }
 
 .copilot-chat-message--user {
-  align-self: flex-end;
   background: var(--button-background--primary, #0b6aa2);
+  border-color: transparent;
   color: var(--button-color--primary, #fff);
 }
 
 .copilot-chat-message--assistant {
-  align-self: flex-start;
   background: var(--very-light-grey, #f6f8fa);
 }
 
 .copilot-chat-message--system {
-  align-self: center;
   color: var(--copilot-chat-text-muted);
   font-size: 12px;
+  border: none;
+  padding: 4px 8px;
 }
 
 .copilot-chat-message--error {
@@ -315,8 +372,7 @@
 }
 
 .copilot-chat-message--complete {
-  border-color: #86efac;
-  opacity: 1;
+  /* no special style - just marks completion */
 }
 
 .copilot-chat-form {
@@ -402,43 +458,11 @@
 }
 
 /* Loading animation */
-.copilot-chat-loading {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.copilot-chat-loading__dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-color, #24292f);
-  animation: copilot-chat-loading-bounce 1.4s infinite ease-in-out both;
-}
-
-.copilot-chat-loading__dot:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.copilot-chat-loading__dot:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes copilot-chat-loading-bounce {
-  0%, 80%, 100% {
-    opacity: 0.5;
-    transform: scale(0.8);
-  }
-  40% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
+/* Loading animation */
 .copilot-chat-loading__text {
+  color: var(--copilot-chat-text-muted);
   font-size: 13px;
-  margin-left: 4px;
+  font-style: italic;
 }
 
 /* Markdown styles */

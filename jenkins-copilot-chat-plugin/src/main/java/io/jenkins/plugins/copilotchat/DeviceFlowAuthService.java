@@ -110,7 +110,7 @@ public class DeviceFlowAuthService {
         GitHubIdentity identity = fetchIdentity(accessToken);
         tokenStore.save(user, accessToken, identity.login(), identity.id());
         pendingLogins.remove(loginId);
-        return LoginPollResult.authenticated(identity.login());
+        return LoginPollResult.authenticated(identity.login(), identity.id());
     }
 
     public Optional<GitHubIdentity> getStoredIdentity(User user) {

@@ -43,6 +43,10 @@
   }
 
   const base = (widget.dataset.baseUrl || '/copilot-chat').replace(/\/$/, '');
+  const pluginBase = `${document.head.dataset.rooturl || ''}/plugin/copilot-chat`;
+  const copilotLogoUrl = `${pluginBase}/images/github-copilot-jenkins-logo.png`;
+  let currentUserAvatar = '';
+  let currentUserLogin = '';
 
   async function post(path, body) {
     const response = await fetch(`${base}/${path}`, {
@@ -61,7 +65,9 @@
     return headers;
   }
 
-  function setAuthenticated(login) {
+  function setAuthenticated(login, githubId) {
+    currentUserLogin = login;
+    currentUserAvatar = githubId ? `https://avatars.githubusercontent.com/u/${githubId}?s=56` : '';
     status.textContent = `Signed in as ${login}`;
     loginButton.hidden = true;
     logoutButton.hidden = false;
@@ -90,7 +96,7 @@
   async function refreshStatus() {
     const result = await post('authStatus');
     if (result.authenticated) {
-      setAuthenticated(result.login);
+      setAuthenticated(result.login, result.id);
     } else {
       setLoggedOut();
     }
@@ -129,7 +135,7 @@
       try {
         const result = await post(`pollLogin?loginId=${encodeURIComponent(loginId)}`);
         if (result.status === 'authenticated') {
-          setAuthenticated(result.login);
+          setAuthenticated(result.login, result.id);
         } else if (result.status === 'pending') {
           status.textContent = '⏳ Waiting for GitHub authorization...';
           pollLogin(loginId, result.interval || interval);
@@ -160,28 +166,46 @@
   }
 
   function addMessage(kind, text, isLoading = false) {
+    const wrapper = document.createElement('div');
+    wrapper.className = `copilot-chat-message-row copilot-chat-message-row--${kind}`;
+
+    // Avatar
+    if (kind === 'user' || kind === 'assistant') {
+      const avatar = document.createElement('div');
+      avatar.className = 'copilot-chat-avatar';
+      if (kind === 'assistant') {
+        const img = document.createElement('img');
+        img.src = copilotLogoUrl;
+        img.alt = 'Copilot';
+        img.className = 'copilot-chat-avatar__img';
+        if (isLoading) img.classList.add('copilot-chat-avatar__img--pulse');
+        avatar.appendChild(img);
+      } else if (currentUserAvatar) {
+        const img = document.createElement('img');
+        img.src = currentUserAvatar;
+        img.alt = currentUserLogin;
+        img.className = 'copilot-chat-avatar__img';
+        avatar.appendChild(img);
+      } else {
+        avatar.innerHTML = `<span class="copilot-chat-avatar__initials">${(currentUserLogin || 'U').charAt(0).toUpperCase()}</span>`;
+      }
+      wrapper.appendChild(avatar);
+    }
+
     const message = document.createElement('div');
     message.className = `copilot-chat-message copilot-chat-message--${kind}`;
     
     if (isLoading) {
-      message.innerHTML = `
-        <div class="copilot-chat-loading">
-          <span class="copilot-chat-loading__dot"></span>
-          <span class="copilot-chat-loading__dot"></span>
-          <span class="copilot-chat-loading__dot"></span>
-        </div>
-        <span class="copilot-chat-loading__text">Waiting for Copilot...</span>
-      `;
+      message.innerHTML = `<span class="copilot-chat-loading__text">Thinking...</span>`;
     } else if (kind === 'assistant') {
-      // Render markdown for assistant messages
       message.className += ' copilot-chat-message--markdown';
-      message.innerHTML = sanitizeHtml(text || '(empty response)');
+      message.innerHTML = renderMarkdown(text || '(empty response)');
     } else {
-      // Plain text for other messages
       message.textContent = text;
     }
     
-    messages.appendChild(message);
+    wrapper.appendChild(message);
+    messages.appendChild(wrapper);
     messages.scrollTop = messages.scrollHeight;
     return message;
   }
@@ -193,8 +217,15 @@
   }
 
   function renderMarkdown(text) {
-    // Simple markdown rendering without external library
-    let html = sanitizeHtml(text);
+    // Escape HTML entities but preserve UTF-8 characters
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    
+    // Code blocks (must go before inline code)
+    html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
     
     // Bold
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -204,12 +235,13 @@
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
     html = html.replace(/_(.+?)_/g, '<em>$1</em>');
     
-    // Code
+    // Inline code
     html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
     
-    // Code blocks
-    html = html.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
-    
+    // Unordered lists
+    html = html.replace(/^[\s]*[-*]\s+(.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
     // Links
     html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
     
@@ -255,9 +287,12 @@
       const decoder = new TextDecoder();
       let buffer = '';
 
-      // Clear loading animation
+      // Clear loading animation and stop avatar pulse
       pending.innerHTML = '';
       pending.classList.remove('copilot-chat-message--error');
+      pending.classList.add('copilot-chat-message--markdown');
+      const pulsingAvatar = pending.parentElement.querySelector('.copilot-chat-avatar__img--pulse');
+      if (pulsingAvatar) pulsingAvatar.classList.remove('copilot-chat-avatar__img--pulse');
 
       while (true) {
         const { done, value } = await reader.read();
