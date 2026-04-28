@@ -4,7 +4,7 @@
 
   <groupId>io.jenkins.plugins</groupId>
   <artifactId>copilot-chat</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.2.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Copilot Chat</name>
@@ -67,6 +67,12 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.jenkins-ci.tools</groupId>
+        <artifactId>maven-hpi-plugin</artifactId>
+        <version>3.66</version>
+        <extensions>true</extensions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>

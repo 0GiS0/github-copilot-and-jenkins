@@ -13,12 +13,23 @@
   const logoutButton = document.getElementById('copilot-chat-logout-button');
   const deviceCode = document.getElementById('copilot-chat-device-code');
   const deviceLink = document.getElementById('copilot-chat-device-link');
+  const deviceInfo = document.getElementById('copilot-chat-device-info');
+  const copyButton = document.getElementById('copilot-chat-copy-button');
   const form = document.getElementById('copilot-chat-form');
   const messages = document.getElementById('copilot-chat-messages');
   const prompt = document.getElementById('copilot-chat-prompt');
   const loginContainer = document.getElementById('copilot-chat-login');
   const resizeHandle = document.getElementById('copilot-chat-resize-handle');
   const sendButton = document.getElementById('copilot-chat-send');
+
+  // Load markdown library
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/marked@11.1.1/+esm';
+  script.type = 'module';
+  script.onload = () => {
+    window.markdownReady = true;
+  };
+  document.head.appendChild(script);
 
   function autoResize() {
     prompt.style.height = 'auto';
@@ -58,6 +69,9 @@
     if (loginContainer) {
       loginContainer.hidden = true;
     }
+    if (deviceInfo) {
+      deviceInfo.hidden = true;
+    }
     deviceCode.textContent = '';
     deviceLink.textContent = '';
     deviceLink.removeAttribute('href');
@@ -83,26 +97,52 @@
   }
 
   async function startLogin() {
-    const start = await post('startLogin');
-    deviceCode.textContent = start.userCode;
-    deviceLink.href = start.verificationUri;
-    deviceLink.textContent = start.verificationUri;
-    status.textContent = 'Waiting for GitHub authorization...';
-    pollLogin(start.loginId, start.interval || 5);
+    try {
+      const start = await post('startLogin');
+      if (start.error) {
+        status.textContent = `❌ ${start.error}`;
+        return;
+      }
+      if (!start.userCode || !start.verificationUri) {
+        status.textContent = '❌ Invalid response from server';
+        console.error('Invalid startLogin response:', start);
+        return;
+      }
+      deviceCode.textContent = start.userCode;
+      deviceLink.href = start.verificationUri;
+      deviceLink.textContent = start.verificationUri;
+      if (deviceInfo) {
+        deviceInfo.hidden = false;
+      }
+      status.textContent = 'Waiting for GitHub authorization...';
+      pollLogin(start.loginId, start.interval || 5);
+    } catch (err) {
+      status.textContent = `❌ ${err.message || 'Login failed'}`;
+      console.error('startLogin error:', err);
+    }
   }
 
   function pollLogin(loginId, interval) {
+    // Reduce the minimum interval to 2 seconds for faster feedback
+    const pollInterval = Math.max(2, interval) * 1000;
     window.setTimeout(async () => {
-      const result = await post(`pollLogin?loginId=${encodeURIComponent(loginId)}`);
-      if (result.status === 'authenticated') {
-        setAuthenticated(result.login);
-      } else if (result.status === 'pending') {
-        status.textContent = 'Still waiting for GitHub authorization...';
-        pollLogin(loginId, result.interval || interval);
-      } else {
-        status.textContent = result.message || result.error || 'Login failed';
+      try {
+        const result = await post(`pollLogin?loginId=${encodeURIComponent(loginId)}`);
+        if (result.status === 'authenticated') {
+          setAuthenticated(result.login);
+        } else if (result.status === 'pending') {
+          status.textContent = '⏳ Waiting for GitHub authorization...';
+          pollLogin(loginId, result.interval || interval);
+        } else if (result.error) {
+          status.textContent = `❌ ${result.error}${result.message ? ': ' + result.message : ''}`;
+        } else {
+          status.textContent = `❌ ${result.message || 'Login failed'}`;
+        }
+      } catch (err) {
+        status.textContent = `❌ ${err.message || 'Network error'}`;
+        console.error('pollLogin error:', err);
       }
-    }, Math.max(1, interval) * 1000);
+    }, pollInterval);
   }
 
   async function logout() {
@@ -119,13 +159,69 @@
     }
   }
 
-  function addMessage(kind, text) {
+  function addMessage(kind, text, isLoading = false) {
     const message = document.createElement('div');
     message.className = `copilot-chat-message copilot-chat-message--${kind}`;
-    message.textContent = text;
+    
+    if (isLoading) {
+      message.innerHTML = `
+        <div class="copilot-chat-loading">
+          <span class="copilot-chat-loading__dot"></span>
+          <span class="copilot-chat-loading__dot"></span>
+          <span class="copilot-chat-loading__dot"></span>
+        </div>
+        <span class="copilot-chat-loading__text">Waiting for Copilot...</span>
+      `;
+    } else if (kind === 'assistant') {
+      // Render markdown for assistant messages
+      message.className += ' copilot-chat-message--markdown';
+      message.innerHTML = sanitizeHtml(text || '(empty response)');
+    } else {
+      // Plain text for other messages
+      message.textContent = text;
+    }
+    
     messages.appendChild(message);
     messages.scrollTop = messages.scrollHeight;
     return message;
+  }
+
+  function sanitizeHtml(html) {
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+  }
+
+  function renderMarkdown(text) {
+    // Simple markdown rendering without external library
+    let html = sanitizeHtml(text);
+    
+    // Bold
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+    
+    // Italic
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+    
+    // Code
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    
+    // Code blocks
+    html = html.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+    
+    // Links
+    html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
+    
+    // Headings
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+    
+    return html;
   }
 
   async function sendMessage(event) {
@@ -138,17 +234,61 @@
     autoResize();
     updateSendState();
     addMessage('user', text);
-    const pending = addMessage('assistant', 'Waiting for Copilot...');
+    const pending = addMessage('assistant', '', true);  // Show loading animation
+
     try {
-      const result = await post('sendMessage', { prompt: text });
-      if (result.error) {
-        pending.textContent = `⚠ ${result.error}`;
+      const response = await fetch(`${base}/sendMessage`, {
+        method: 'POST',
+        headers: crumbHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ prompt: text, pagePath: window.location.pathname })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        pending.innerHTML = `<span class="copilot-chat-message--error">⚠ ${error.error || 'Unknown error'}</span>`;
         pending.classList.add('copilot-chat-message--error');
-      } else {
-        pending.textContent = result.message || '(empty response)';
+        return;
+      }
+
+      let fullContent = '';
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      // Clear loading animation
+      pending.innerHTML = '';
+      pending.classList.remove('copilot-chat-message--error');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === 'delta') {
+                fullContent += data.content;
+                pending.innerHTML = renderMarkdown(fullContent);
+                messages.scrollTop = messages.scrollHeight;
+              } else if (data.type === 'complete') {
+                pending.classList.add('copilot-chat-message--complete');
+              } else if (data.type === 'error') {
+                pending.innerHTML = `<span class="copilot-chat-message--error">⚠ ${data.message}</span>`;
+                pending.classList.add('copilot-chat-message--error');
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE message:', line, e);
+            }
+          }
+        }
       }
     } catch (err) {
-      pending.textContent = `⚠ ${err.message || 'Network error'}`;
+      pending.innerHTML = `<span class="copilot-chat-message--error">⚠ ${err.message || 'Network error'}</span>`;
       pending.classList.add('copilot-chat-message--error');
     }
   }
@@ -158,6 +298,25 @@
   loginButton.addEventListener('click', startLogin);
   logoutButton.addEventListener('click', logout);
   form.addEventListener('submit', sendMessage);
+
+  if (copyButton) {
+    copyButton.addEventListener('click', async () => {
+      const codeText = deviceCode.textContent.trim();
+      if (codeText) {
+        try {
+          await navigator.clipboard.writeText(codeText);
+          copyButton.classList.add('copied');
+          copyButton.setAttribute('title', 'Copied!');
+          setTimeout(() => {
+            copyButton.classList.remove('copied');
+            copyButton.setAttribute('title', 'Copy code to clipboard');
+          }, 2000);
+        } catch (err) {
+          console.error('Failed to copy:', err);
+        }
+      }
+    });
+  }
 
   prompt.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {

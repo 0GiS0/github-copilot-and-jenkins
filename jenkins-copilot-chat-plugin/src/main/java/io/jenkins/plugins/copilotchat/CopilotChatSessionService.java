@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -35,6 +36,7 @@ import jenkins.model.Jenkins;
 public class CopilotChatSessionService {
     private static final Logger LOGGER = Logger.getLogger(CopilotChatSessionService.class.getName());
     private static final String JENKINS_MCP_SERVER_NAME = "jenkins";
+    private static final String GITHUB_MCP_SERVER_NAME = "github";
 
     private final CopilotClientFactory clientFactory;
     private final ConcurrentMap<String, UserChatSession> sessions = new ConcurrentHashMap<>();
@@ -43,7 +45,7 @@ public class CopilotChatSessionService {
         this.clientFactory = clientFactory;
     }
 
-    public CompletableFuture<String> send(User user, CopilotChatConfiguration configuration, String prompt) {
+    public CompletableFuture<String> send(User user, CopilotChatConfiguration configuration, String prompt, String pagePath) {
         return getOrCreateSession(user, configuration).thenCompose(session -> {
             StringBuilder response = new StringBuilder();
             CompletableFuture<String> done = new CompletableFuture<>();
@@ -55,9 +57,43 @@ public class CopilotChatSessionService {
             });
             session.session().on(SessionErrorEvent.class, event -> done.completeExceptionally(new IllegalStateException(event.getData().message())));
             session.session().on(SessionIdleEvent.class, event -> done.complete(response.toString()));
-            session.session().send(new MessageOptions().setPrompt(prompt));
+            String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
+            session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
             return done;
         });
+    }
+
+    public CompletableFuture<Void> sendStream(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, Consumer<String> deltaConsumer, Consumer<String> completeConsumer, Consumer<Throwable> errorConsumer) {
+        return getOrCreateSession(user, configuration).thenCompose(session -> {
+            CompletableFuture<Void> done = new CompletableFuture<>();
+            session.session().on(AssistantMessageDeltaEvent.class, event -> {
+                String delta = event.getData().deltaContent();
+                if (delta != null && !delta.isEmpty()) {
+                    deltaConsumer.accept(delta);
+                }
+            });
+            session.session().on(AssistantMessageEvent.class, event -> {
+                String content = event.getData().content();
+                if (content != null && !content.isEmpty()) {
+                    completeConsumer.accept(content);
+                }
+            });
+            session.session().on(SessionErrorEvent.class, event -> {
+                errorConsumer.accept(new IllegalStateException(event.getData().message()));
+                done.completeExceptionally(new IllegalStateException(event.getData().message()));
+            });
+            session.session().on(SessionIdleEvent.class, event -> done.complete(null));
+            String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
+            session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
+            return done;
+        });
+    }
+
+    private static String enrichPromptWithContext(String prompt, String pagePath) {
+        if (pagePath == null || pagePath.isBlank()) {
+            return prompt;
+        }
+        return "[Jenkins page context: " + pagePath + "]\n\n" + prompt;
     }
 
     private CompletableFuture<UserChatSession> getOrCreateSession(User user, CopilotChatConfiguration configuration) {
@@ -119,6 +155,20 @@ public class CopilotChatSessionService {
             jenkins.setHeaders(headers);
         }
         servers.put(JENKINS_MCP_SERVER_NAME, jenkins);
+
+        // GitHub MCP server for repository operations (create PRs, edit files, etc.)
+        String githubMcpUrl = configuration.getGithubMcpUrl();
+        String githubMcpToken = configuration.getGithubMcpToken();
+        if (githubMcpUrl != null && !githubMcpUrl.isBlank()
+                && githubMcpToken != null && !githubMcpToken.isBlank()) {
+            McpHttpServerConfig github = new McpHttpServerConfig().setUrl(githubMcpUrl);
+            github.setTools(List.of("*"));
+            Map<String, String> ghHeaders = new LinkedHashMap<>();
+            ghHeaders.put("Authorization", "Bearer " + githubMcpToken);
+            github.setHeaders(ghHeaders);
+            servers.put(GITHUB_MCP_SERVER_NAME, github);
+        }
+
         return servers;
     }
 
@@ -149,6 +199,12 @@ public class CopilotChatSessionService {
                 + "getJobScm, getBuildScm, getBuildChangeSets, findJobsWithScmUrl, whoAmI, getStatus, updateBuild, "
                 + "rebuildBuild, replayBuild, getReplayScripts. "
                 + "Always prefer calling these tools to answer the user's questions about Jenkins (jobs, builds, logs, status). "
+                + "You also have access to a GitHub MCP server (registered as 'github') that exposes tools to interact with GitHub repositories: "
+                + "create branches, read and edit files, create pull requests, search issues, etc. "
+                + "When the user asks you to modify a file (like a Jenkinsfile), use the Jenkins MCP tools to find the SCM repository URL "
+                + "and then use the GitHub MCP tools to create a branch, make the changes, and open a pull request. "
+                + "The user message includes a [Jenkins page context: ...] prefix with the current page path so you know which job they are viewing. "
+                + "Use getJobScm with the job name derived from the path to find the repository. "
                 + "Be concise and use Markdown to format responses. "
                 + "Job names inside folders use the form 'folder/job' (for example 'copilot-demos/code-analysis').";
     }

@@ -35,10 +35,17 @@ public class CopilotChatRootAction implements RootAction {
         return "copilot-chat";
     }
 
-    public HttpResponse doStartLogin() throws IOException, InterruptedException {
+    public HttpResponse doStartLogin() {
         Jenkins.get().checkPermission(Jenkins.READ);
-        LoginStart start = authService.startLogin(requireUser(), CopilotChatConfiguration.get());
-        return json(start);
+        try {
+            LoginStart start = authService.startLogin(requireUser(), CopilotChatConfiguration.get());
+            return json(start);
+        } catch (IllegalStateException e) {
+            return error(e.getMessage());
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Failed to start login";
+            return error(msg);
+        }
     }
 
     public HttpResponse doPollLogin(@QueryParameter String loginId) throws IOException, InterruptedException {
@@ -69,17 +76,70 @@ public class CopilotChatRootAction implements RootAction {
             error("prompt is required").generateResponse(request, response, null);
             return;
         }
-        try {
-            String answer = chatService.send(requireUser(), CopilotChatConfiguration.get(), message.prompt())
-                .get(120, java.util.concurrent.TimeUnit.SECONDS);
-            json(Map.of("message", answer)).generateResponse(request, response, null);
-        } catch (java.util.concurrent.TimeoutException e) {
-            error("Copilot did not respond within 120 seconds. The session may be waiting for a tool permission. Try a simpler prompt.")
-                .generateResponse(request, response, null);
-        } catch (Exception e) {
-            String msg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
-            error(msg == null ? e.toString() : msg).generateResponse(request, response, null);
-        }
+
+        // Use streaming response
+        new StreamingHttpResponse(writer -> {
+            try {
+                chatService.sendStream(
+                    requireUser(),
+                    CopilotChatConfiguration.get(),
+                    message.prompt(),
+                    message.pagePath(),
+                    // Delta consumer - send each chunk as SSE event
+                    delta -> {
+                        try {
+                            writer.write("data: ");
+                            writer.write(objectMapper.writeValueAsString(Map.of("type", "delta", "content", delta)));
+                            writer.write("\n\n");
+                            writer.flush();
+                        } catch (Exception ex) {
+                            throw new java.io.UncheckedIOException(new java.io.IOException(ex));
+                        }
+                    },
+                    // Complete consumer - send final complete event
+                    complete -> {
+                        try {
+                            writer.write("data: ");
+                            writer.write(objectMapper.writeValueAsString(Map.of("type", "complete")));
+                            writer.write("\n\n");
+                            writer.flush();
+                        } catch (Exception ex) {
+                            throw new java.io.UncheckedIOException(new java.io.IOException(ex));
+                        }
+                    },
+                    // Error consumer
+                    err -> {
+                        try {
+                            writer.write("data: ");
+                            writer.write(objectMapper.writeValueAsString(Map.of("type", "error", "message", err.getMessage())));
+                            writer.write("\n\n");
+                            writer.flush();
+                        } catch (Exception ex) {
+                            throw new java.io.UncheckedIOException(new java.io.IOException(ex));
+                        }
+                    }
+                ).get(120, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (java.util.concurrent.TimeoutException e) {
+                try {
+                    writer.write("data: ");
+                    writer.write(objectMapper.writeValueAsString(Map.of("type", "error", "message", "Copilot did not respond within 120 seconds")));
+                    writer.write("\n\n");
+                    writer.flush();
+                } catch (Exception ex) {
+                    // Ignore - connection may be closed
+                }
+            } catch (Exception e) {
+                String msg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+                try {
+                    writer.write("data: ");
+                    writer.write(objectMapper.writeValueAsString(Map.of("type", "error", "message", msg == null ? e.toString() : msg)));
+                    writer.write("\n\n");
+                } catch (Exception ex) {
+                    // Ignore - connection may be closed
+                }
+                writer.flush();
+            }
+        }).generateResponse(request, response, null);
     }
 
     private User requireUser() {

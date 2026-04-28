@@ -22,7 +22,6 @@ services:
       - jenkins_home:/var/jenkins_home
       - ./jenkins-config:/var/jenkins_config:ro
       - ..:/workspace:ro
-      - ../jenkins-copilot-chat-plugin/target/copilot-chat-0.1.0-SNAPSHOT.hpi:/usr/share/jenkins/ref/plugins/copilot-chat.hpi:ro
     environment:
       - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
       - CASC_JENKINS_CONFIG=/var/jenkins_config/casc.yaml

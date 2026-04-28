@@ -27,8 +27,20 @@
       <div class="copilot-chat-body">
         <div id="copilot-chat-login" class="copilot-chat-login">
           <button id="copilot-chat-login-button" class="jenkins-button jenkins-button--primary" type="button">Sign in with GitHub</button>
-          <div id="copilot-chat-device-code" class="copilot-chat-device-code"></div>
-          <a id="copilot-chat-device-link" target="_blank" rel="noopener noreferrer"></a>
+          <div id="copilot-chat-device-info" class="copilot-chat-device-info" hidden="hidden">
+            <div class="copilot-chat-device-container">
+              <div class="copilot-chat-device-label">Device Code</div>
+              <div class="copilot-chat-device-code-wrapper">
+                <div id="copilot-chat-device-code" class="copilot-chat-device-code"></div>
+                <button id="copilot-chat-copy-button" class="copilot-chat-copy-button" type="button" title="Copy code to clipboard" aria-label="Copy code">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+              </div>
+            </div>
+            <div class="copilot-chat-device-link-wrapper">
+              <a id="copilot-chat-device-link" class="copilot-chat-device-link" target="_blank" rel="noopener noreferrer"></a>
+            </div>
+          </div>
         </div>
         <div id="copilot-chat-messages" class="copilot-chat-messages" aria-live="polite"></div>
       </div>

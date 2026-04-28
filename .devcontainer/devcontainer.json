@@ -34,9 +34,23 @@
     "GH_TOKEN": "${localEnv:GH_TOKEN}"
   },
   "features": {
-    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true,
+      "version": "latest"
+    },
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "22"
+      "nodeGypDependencies": true,
+      "version": "lts",
+      "pnpmVersion": "latest",
+      "nvmVersion": "latest"
+    },
+    "ghcr.io/devcontainers-extra/features/maven-sdkman:2": {
+      "version": "latest",
+      "jdkVersion": "17",
+      "jdkDistro": "ms"
+    },
+    "ghcr.io/devcontainers-extra/features/jenkinsx-cli:1": {
+      "version": "latest"
     }
   }
 }

@@ -1,5 +1,15 @@
 {
   "features": {
+    "ghcr.io/devcontainers-extra/features/jenkinsx-cli:1": {
+      "version": "1.0.8",
+      "resolved": "ghcr.io/devcontainers-extra/features/jenkinsx-cli@sha256:5eda4581ef70f44270bc06509b0cf7367ef93175783e145d3d37392fcbff2e42",
+      "integrity": "sha256:5eda4581ef70f44270bc06509b0cf7367ef93175783e145d3d37392fcbff2e42"
+    },
+    "ghcr.io/devcontainers-extra/features/maven-sdkman:2": {
+      "version": "2.0.16",
+      "resolved": "ghcr.io/devcontainers-extra/features/maven-sdkman@sha256:ae6a3972c375192903edee5d42a9be35e4fdd1971fad992906f3854250060f4d",
+      "integrity": "sha256:ae6a3972c375192903edee5d42a9be35e4fdd1971fad992906f3854250060f4d"
+    },
     "ghcr.io/devcontainers/features/github-cli:1": {
       "version": "1.1.0",
       "resolved": "ghcr.io/devcontainers/features/github-cli@sha256:d22f50b70ed75339b4eed1ba9ecde3a1791f90e88d37936517e3bace0bbad671",

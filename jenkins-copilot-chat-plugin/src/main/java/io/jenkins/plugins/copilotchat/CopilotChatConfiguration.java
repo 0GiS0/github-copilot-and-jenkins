@@ -17,6 +17,8 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     private String jenkinsMcpUrl;
     private String jenkinsMcpUsername = "admin";
     private String jenkinsMcpToken = "admin";
+    private String githubMcpUrl;
+    private String githubMcpToken;
 
     public CopilotChatConfiguration() {
         load();
@@ -107,6 +109,28 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     @DataBoundSetter
     public void setJenkinsMcpToken(String jenkinsMcpToken) {
         this.jenkinsMcpToken = normalize(jenkinsMcpToken);
+        save();
+    }
+
+    @CheckForNull
+    public String getGithubMcpUrl() {
+        return githubMcpUrl;
+    }
+
+    @DataBoundSetter
+    public void setGithubMcpUrl(String githubMcpUrl) {
+        this.githubMcpUrl = normalize(githubMcpUrl);
+        save();
+    }
+
+    @CheckForNull
+    public String getGithubMcpToken() {
+        return githubMcpToken;
+    }
+
+    @DataBoundSetter
+    public void setGithubMcpToken(String githubMcpToken) {
+        this.githubMcpToken = normalize(githubMcpToken);
         save();
     }
 
