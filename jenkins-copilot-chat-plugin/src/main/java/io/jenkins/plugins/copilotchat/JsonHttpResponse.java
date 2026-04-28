@@ -18,7 +18,8 @@ public class JsonHttpResponse implements HttpResponse {
     }
 
     @Override
-    public void generateResponse(StaplerRequest2 request, StaplerResponse2 response, Object node) throws IOException {
+    public void generateResponse(StaplerRequest2 request, StaplerResponse2 response, Object node)
+            throws IOException {
         response.setStatus(status);
         response.setContentType("application/json;charset=UTF-8");
         OBJECT_MAPPER.writeValue(response.getWriter(), value);

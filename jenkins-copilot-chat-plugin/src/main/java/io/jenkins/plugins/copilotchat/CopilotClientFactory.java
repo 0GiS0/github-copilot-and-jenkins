@@ -17,9 +17,8 @@ public class CopilotClientFactory {
         if (token.isEmpty()) {
             throw new IllegalStateException("User is not authenticated with GitHub.");
         }
-        CopilotClientOptions options = new CopilotClientOptions()
-                .setGitHubToken(token.get())
-                .setUseLoggedInUser(false);
+        CopilotClientOptions options =
+                new CopilotClientOptions().setGitHubToken(token.get()).setUseLoggedInUser(false);
         if (configuration.getCliPath() != null && !configuration.getCliPath().isBlank()) {
             options.setCliPath(configuration.getCliPath());
         }

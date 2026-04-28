@@ -15,7 +15,8 @@ public class StreamingHttpResponse implements HttpResponse {
     }
 
     @Override
-    public void generateResponse(StaplerRequest2 request, StaplerResponse2 response, Object node) throws IOException {
+    public void generateResponse(StaplerRequest2 request, StaplerResponse2 response, Object node)
+            throws IOException {
         response.setContentType("text/event-stream; charset=utf-8");
         response.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-cache");

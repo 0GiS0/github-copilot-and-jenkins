@@ -13,9 +13,7 @@ import com.github.copilot.sdk.json.McpServerConfig;
 import com.github.copilot.sdk.json.MessageOptions;
 import com.github.copilot.sdk.json.ModelInfo;
 import com.github.copilot.sdk.json.PermissionHandler;
-import com.github.copilot.sdk.json.PermissionRequest;
 import com.github.copilot.sdk.json.PermissionRequestResult;
-import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.SystemMessageConfig;
 import hudson.model.User;
@@ -38,7 +36,8 @@ import java.util.stream.Collectors;
 import jenkins.model.Jenkins;
 
 public class CopilotChatSessionService {
-    private static final Logger LOGGER = Logger.getLogger(CopilotChatSessionService.class.getName());
+    private static final Logger LOGGER =
+            Logger.getLogger(CopilotChatSessionService.class.getName());
     private static final String JENKINS_MCP_SERVER_NAME = "jenkins";
     private static final String GITHUB_MCP_SERVER_NAME = "github";
 
@@ -50,90 +49,160 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * List available models for the user.
-     * Uses an existing session's client if available, otherwise creates a temporary client.
+     * List available models for the user. Uses an existing session's client if available, otherwise
+     * creates a temporary client.
      */
-    public CompletableFuture<List<ModelInfo>> listModels(User user, CopilotChatConfiguration configuration) {
+    public CompletableFuture<List<ModelInfo>> listModels(
+            User user, CopilotChatConfiguration configuration) {
         UserChatSession existing = sessions.get(user.getId());
         if (existing != null) {
             return existing.client().listModels();
         }
         // No existing session - create a temporary client just for listing models
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                CopilotClient client = clientFactory.createFor(user, configuration);
-                client.start().get(30, TimeUnit.SECONDS);
-                List<ModelInfo> models = client.listModels().get(30, TimeUnit.SECONDS);
-                client.stop();
-                return models;
-            } catch (Exception e) {
-                throw new IllegalStateException("Failed to list models: " + e.getMessage(), e);
-            }
-        });
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    try {
+                        CopilotClient client = clientFactory.createFor(user, configuration);
+                        client.start().get(30, TimeUnit.SECONDS);
+                        List<ModelInfo> models = client.listModels().get(30, TimeUnit.SECONDS);
+                        client.stop();
+                        return models;
+                    } catch (Exception e) {
+                        throw new IllegalStateException(
+                                "Failed to list models: " + e.getMessage(), e);
+                    }
+                });
     }
 
-    public CompletableFuture<String> send(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, String model) {
-        String effectiveModel = (model != null && !model.isBlank()) ? model : configuration.getDefaultModel();
-        return getOrCreateSession(user, configuration, effectiveModel).thenCompose(session -> {
-            StringBuilder response = new StringBuilder();
-            CompletableFuture<String> done = new CompletableFuture<>();
-            List<Closeable> listeners = new java.util.ArrayList<>();
-            listeners.add(session.session().on(AssistantMessageDeltaEvent.class, event -> response.append(event.getData().deltaContent())));
-            listeners.add(session.session().on(AssistantMessageEvent.class, event -> {
-                if (response.isEmpty()) {
-                    response.append(event.getData().content());
-                }
-            }));
-            listeners.add(session.session().on(SessionErrorEvent.class, event -> {
-                closeQuietly(listeners);
-                done.completeExceptionally(new IllegalStateException(event.getData().message()));
-            }));
-            listeners.add(session.session().on(SessionIdleEvent.class, event -> {
-                closeQuietly(listeners);
-                done.complete(response.toString());
-            }));
-            String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
-            session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
-            return done;
-        });
+    public CompletableFuture<String> send(
+            User user,
+            CopilotChatConfiguration configuration,
+            String prompt,
+            String pagePath,
+            String model) {
+        String effectiveModel =
+                (model != null && !model.isBlank()) ? model : configuration.getDefaultModel();
+        return getOrCreateSession(user, configuration, effectiveModel)
+                .thenCompose(
+                        session -> {
+                            StringBuilder response = new StringBuilder();
+                            CompletableFuture<String> done = new CompletableFuture<>();
+                            List<Closeable> listeners = new java.util.ArrayList<>();
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    AssistantMessageDeltaEvent.class,
+                                                    event ->
+                                                            response.append(
+                                                                    event.getData()
+                                                                            .deltaContent())));
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    AssistantMessageEvent.class,
+                                                    event -> {
+                                                        if (response.isEmpty()) {
+                                                            response.append(
+                                                                    event.getData().content());
+                                                        }
+                                                    }));
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    SessionErrorEvent.class,
+                                                    event -> {
+                                                        closeQuietly(listeners);
+                                                        done.completeExceptionally(
+                                                                new IllegalStateException(
+                                                                        event.getData().message()));
+                                                    }));
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    SessionIdleEvent.class,
+                                                    event -> {
+                                                        closeQuietly(listeners);
+                                                        done.complete(response.toString());
+                                                    }));
+                            String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
+                            session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
+                            return done;
+                        });
     }
 
-    public CompletableFuture<Void> sendStream(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, String model, Consumer<String> deltaConsumer, Consumer<String> reasoningConsumer, Consumer<String> completeConsumer, Consumer<Throwable> errorConsumer) {
-        String effectiveModel = (model != null && !model.isBlank()) ? model : configuration.getDefaultModel();
-        return getOrCreateSession(user, configuration, effectiveModel).thenCompose(session -> {
-            CompletableFuture<Void> done = new CompletableFuture<>();
-            List<Closeable> listeners = new java.util.ArrayList<>();
-            listeners.add(session.session().on(AssistantReasoningEvent.class, event -> {
-                String content = event.getData().content();
-                if (content != null && !content.isEmpty()) {
-                    reasoningConsumer.accept(content);
-                }
-            }));
-            listeners.add(session.session().on(AssistantMessageDeltaEvent.class, event -> {
-                String delta = event.getData().deltaContent();
-                if (delta != null && !delta.isEmpty()) {
-                    deltaConsumer.accept(delta);
-                }
-            }));
-            listeners.add(session.session().on(AssistantMessageEvent.class, event -> {
-                String content = event.getData().content();
-                if (content != null && !content.isEmpty()) {
-                    completeConsumer.accept(content);
-                }
-            }));
-            listeners.add(session.session().on(SessionErrorEvent.class, event -> {
-                closeQuietly(listeners);
-                errorConsumer.accept(new IllegalStateException(event.getData().message()));
-                done.completeExceptionally(new IllegalStateException(event.getData().message()));
-            }));
-            listeners.add(session.session().on(SessionIdleEvent.class, event -> {
-                closeQuietly(listeners);
-                done.complete(null);
-            }));
-            String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
-            session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
-            return done;
-        });
+    public CompletableFuture<Void> sendStream(
+            User user,
+            CopilotChatConfiguration configuration,
+            String prompt,
+            String pagePath,
+            String model,
+            Consumer<String> deltaConsumer,
+            Consumer<String> reasoningConsumer,
+            Consumer<String> completeConsumer,
+            Consumer<Throwable> errorConsumer) {
+        String effectiveModel =
+                (model != null && !model.isBlank()) ? model : configuration.getDefaultModel();
+        return getOrCreateSession(user, configuration, effectiveModel)
+                .thenCompose(
+                        session -> {
+                            CompletableFuture<Void> done = new CompletableFuture<>();
+                            List<Closeable> listeners = new java.util.ArrayList<>();
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    AssistantReasoningEvent.class,
+                                                    event -> {
+                                                        String content = event.getData().content();
+                                                        if (content != null && !content.isEmpty()) {
+                                                            reasoningConsumer.accept(content);
+                                                        }
+                                                    }));
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    AssistantMessageDeltaEvent.class,
+                                                    event -> {
+                                                        String delta =
+                                                                event.getData().deltaContent();
+                                                        if (delta != null && !delta.isEmpty()) {
+                                                            deltaConsumer.accept(delta);
+                                                        }
+                                                    }));
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    AssistantMessageEvent.class,
+                                                    event -> {
+                                                        String content = event.getData().content();
+                                                        if (content != null && !content.isEmpty()) {
+                                                            completeConsumer.accept(content);
+                                                        }
+                                                    }));
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    SessionErrorEvent.class,
+                                                    event -> {
+                                                        closeQuietly(listeners);
+                                                        errorConsumer.accept(
+                                                                new IllegalStateException(
+                                                                        event.getData().message()));
+                                                        done.completeExceptionally(
+                                                                new IllegalStateException(
+                                                                        event.getData().message()));
+                                                    }));
+                            listeners.add(
+                                    session.session()
+                                            .on(
+                                                    SessionIdleEvent.class,
+                                                    event -> {
+                                                        closeQuietly(listeners);
+                                                        done.complete(null);
+                                                    }));
+                            String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
+                            session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
+                            return done;
+                        });
     }
 
     private static void closeQuietly(List<Closeable> closeables) {
@@ -153,11 +222,15 @@ public class CopilotChatSessionService {
         return "[Jenkins page context: " + pagePath + "]\n\n" + prompt;
     }
 
-    private CompletableFuture<UserChatSession> getOrCreateSession(User user, CopilotChatConfiguration configuration, String model) {
+    private CompletableFuture<UserChatSession> getOrCreateSession(
+            User user, CopilotChatConfiguration configuration, String model) {
         UserChatSession existing = sessions.get(user.getId());
         // If session exists but uses a different model, invalidate it
         if (existing != null && !model.equals(existing.model())) {
-            LOGGER.log(Level.INFO, "Model changed from {0} to {1}, recreating session", new Object[]{existing.model(), model});
+            LOGGER.log(
+                    Level.INFO,
+                    "Model changed from {0} to {1}, recreating session",
+                    new Object[] {existing.model(), model});
             invalidateSession(user);
             existing = null;
         }
@@ -165,52 +238,62 @@ public class CopilotChatSessionService {
             return CompletableFuture.completedFuture(existing);
         }
         final String effectiveModel = model;
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                CopilotClient client = clientFactory.createFor(user, configuration);
-                client.start().get();
-                PermissionHandler approveAll = (request, invocation) ->
-                    CompletableFuture.completedFuture(
-                        new PermissionRequestResult()
-                            .setKind("approve-once")
-                            .setRules(List.of()));
-                SessionConfig sessionConfig = new SessionConfig()
-                    .setOnPermissionRequest(approveAll)
-                        .setModel(effectiveModel)
-                        .setStreaming(true)
-                        .setSystemMessage(new SystemMessageConfig().setContent(buildSystemMessage()));
-                Map<String, McpServerConfig> mcpServers = buildMcpServers(configuration);
-                if (!mcpServers.isEmpty()) {
-                    sessionConfig.setMcpServers(mcpServers);
-                }
-                List<String> availableTools = parseTools(configuration.getAvailableTools());
-                if (!availableTools.isEmpty()) {
-                    sessionConfig.setAvailableTools(availableTools);
-                }
-                CopilotSession session = client.createSession(sessionConfig).get();
-                // Wait for MCP servers to load before allowing sends
-                if (!mcpServers.isEmpty()) {
-                    CountDownLatch mcpReady = new CountDownLatch(1);
-                    session.on(SessionMcpServersLoadedEvent.class, event -> mcpReady.countDown());
-                    if (!mcpReady.await(30, TimeUnit.SECONDS)) {
-                        LOGGER.log(Level.WARNING, "Timed out waiting for MCP servers to load");
-                    } else {
-                        LOGGER.log(Level.INFO, "MCP servers loaded successfully");
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    try {
+                        CopilotClient client = clientFactory.createFor(user, configuration);
+                        client.start().get();
+                        PermissionHandler approveAll =
+                                (request, invocation) ->
+                                        CompletableFuture.completedFuture(
+                                                new PermissionRequestResult()
+                                                        .setKind("approve-once")
+                                                        .setRules(List.of()));
+                        SessionConfig sessionConfig =
+                                new SessionConfig()
+                                        .setOnPermissionRequest(approveAll)
+                                        .setModel(effectiveModel)
+                                        .setStreaming(true)
+                                        .setSystemMessage(
+                                                new SystemMessageConfig()
+                                                        .setContent(buildSystemMessage()));
+                        Map<String, McpServerConfig> mcpServers = buildMcpServers(configuration);
+                        if (!mcpServers.isEmpty()) {
+                            sessionConfig.setMcpServers(mcpServers);
+                        }
+                        List<String> availableTools = parseTools(configuration.getAvailableTools());
+                        if (!availableTools.isEmpty()) {
+                            sessionConfig.setAvailableTools(availableTools);
+                        }
+                        CopilotSession session = client.createSession(sessionConfig).get();
+                        // Wait for MCP servers to load before allowing sends
+                        if (!mcpServers.isEmpty()) {
+                            CountDownLatch mcpReady = new CountDownLatch(1);
+                            session.on(
+                                    SessionMcpServersLoadedEvent.class,
+                                    event -> mcpReady.countDown());
+                            if (!mcpReady.await(30, TimeUnit.SECONDS)) {
+                                LOGGER.log(
+                                        Level.WARNING, "Timed out waiting for MCP servers to load");
+                            } else {
+                                LOGGER.log(Level.INFO, "MCP servers loaded successfully");
+                            }
+                        }
+                        UserChatSession created =
+                                new UserChatSession(client, session, effectiveModel);
+                        UserChatSession previous = sessions.putIfAbsent(user.getId(), created);
+                        return previous == null ? created : previous;
+                    } catch (Exception e) {
+                        throw new IllegalStateException("Could not start Copilot chat session", e);
                     }
-                }
-                UserChatSession created = new UserChatSession(client, session, effectiveModel);
-                UserChatSession previous = sessions.putIfAbsent(user.getId(), created);
-                return previous == null ? created : previous;
-            } catch (Exception e) {
-                throw new IllegalStateException("Could not start Copilot chat session", e);
-            }
-        });
+                });
     }
 
-    private static Map<String, McpServerConfig> buildMcpServers(CopilotChatConfiguration configuration) {
+    private static Map<String, McpServerConfig> buildMcpServers(
+            CopilotChatConfiguration configuration) {
         Map<String, McpServerConfig> servers = new LinkedHashMap<>();
-        McpHttpServerConfig jenkins = new McpHttpServerConfig()
-                .setUrl(buildJenkinsMcpUrl(configuration));
+        McpHttpServerConfig jenkins =
+                new McpHttpServerConfig().setUrl(buildJenkinsMcpUrl(configuration));
         jenkins.setTools(List.of("*"));
         String auth = buildJenkinsAuthHeader(configuration);
         if (auth != null) {
@@ -223,8 +306,10 @@ public class CopilotChatSessionService {
         // GitHub MCP server for repository operations (create PRs, edit files, etc.)
         String githubMcpUrl = configuration.getGithubMcpUrl();
         String githubMcpToken = configuration.getGithubMcpToken();
-        if (githubMcpUrl != null && !githubMcpUrl.isBlank()
-                && githubMcpToken != null && !githubMcpToken.isBlank()) {
+        if (githubMcpUrl != null
+                && !githubMcpUrl.isBlank()
+                && githubMcpToken != null
+                && !githubMcpToken.isBlank()) {
             McpHttpServerConfig github = new McpHttpServerConfig().setUrl(githubMcpUrl);
             github.setTools(List.of("*"));
             Map<String, String> ghHeaders = new LinkedHashMap<>();
@@ -251,7 +336,9 @@ public class CopilotChatSessionService {
             return null;
         }
         String raw = username + ":" + token;
-        return "Basic " + Base64.getEncoder().encodeToString(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return "Basic "
+                + Base64.getEncoder()
+                        .encodeToString(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     private static String buildSystemMessage() {

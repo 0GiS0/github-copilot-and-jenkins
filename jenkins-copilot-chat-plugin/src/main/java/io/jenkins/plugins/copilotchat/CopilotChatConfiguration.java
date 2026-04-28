@@ -92,7 +92,9 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     public String getJenkinsMcpUsername() {
-        return jenkinsMcpUsername == null || jenkinsMcpUsername.isBlank() ? "admin" : jenkinsMcpUsername;
+        return jenkinsMcpUsername == null || jenkinsMcpUsername.isBlank()
+                ? "admin"
+                : jenkinsMcpUsername;
     }
 
     @DataBoundSetter

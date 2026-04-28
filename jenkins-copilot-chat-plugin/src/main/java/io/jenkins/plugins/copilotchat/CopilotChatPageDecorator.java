@@ -4,5 +4,4 @@ import hudson.Extension;
 import hudson.model.PageDecorator;
 
 @Extension
-public class CopilotChatPageDecorator extends PageDecorator {
-}
+public class CopilotChatPageDecorator extends PageDecorator {}

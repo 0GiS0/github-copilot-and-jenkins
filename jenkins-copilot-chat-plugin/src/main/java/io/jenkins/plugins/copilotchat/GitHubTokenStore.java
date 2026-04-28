@@ -9,7 +9,8 @@ public class GitHubTokenStore {
     private static final String TOKEN_PROPERTY_NAME = CopilotTokenUserProperty.class.getName();
 
     public void save(User user, String token, String login, long githubUserId) throws IOException {
-        user.addProperty(new CopilotTokenUserProperty(Secret.fromString(token), login, githubUserId));
+        user.addProperty(
+                new CopilotTokenUserProperty(Secret.fromString(token), login, githubUserId));
         user.save();
     }
 
@@ -26,7 +27,8 @@ public class GitHubTokenStore {
         if (property == null || property.getGithubLogin() == null) {
             return Optional.empty();
         }
-        return Optional.of(new GitHubIdentity(property.getGithubLogin(), property.getGithubUserId()));
+        return Optional.of(
+                new GitHubIdentity(property.getGithubLogin(), property.getGithubUserId()));
     }
 
     public void delete(User user) {

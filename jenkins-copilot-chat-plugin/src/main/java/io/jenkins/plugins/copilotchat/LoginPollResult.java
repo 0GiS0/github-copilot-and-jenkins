@@ -1,6 +1,7 @@
 package io.jenkins.plugins.copilotchat;
 
-public record LoginPollResult(String status, String error, String message, String login, Long id, int interval) {
+public record LoginPollResult(
+        String status, String error, String message, String login, Long id, int interval) {
     public static LoginPollResult pending(String message, int interval) {
         return new LoginPollResult("pending", null, message, null, null, interval);
     }
