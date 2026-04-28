@@ -1,8 +1,8 @@
 ---
-name: groovy-expert
+name: '⚙️☕ Groovy Expert for Jenkins'
 description: Expert agent for Groovy scripting in Jenkins - Pipelines, Shared Libraries, Job DSL, CPS handling, and Sandbox troubleshooting.
 argument-hint: A Groovy/Pipeline question, code to review, or a script to write for Jenkins.
-tools: ['vscode', 'execute', 'read', 'edit', 'search']
+tools: [vscode, execute, read, 'jenkins/*', 'github/*', edit, search]
 ---
 
 # Groovy Expert for Jenkins 📜
