@@ -264,7 +264,9 @@
     }
     prompt.value = '';
     autoResize();
-    updateSendState();
+    prompt.disabled = true;
+    sendButton.disabled = true;
+
     addMessage('user', text);
     const pending = addMessage('assistant', '', true);  // Show loading animation
 
@@ -294,6 +296,10 @@
       const pulsingAvatar = pending.parentElement.querySelector('.copilot-chat-avatar__img--pulse');
       if (pulsingAvatar) pulsingAvatar.classList.remove('copilot-chat-avatar__img--pulse');
 
+      const cursor = document.createElement('span');
+      cursor.className = 'copilot-chat-cursor';
+      pending.appendChild(cursor);
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -309,10 +315,13 @@
               if (data.type === 'delta') {
                 fullContent += data.content;
                 pending.innerHTML = renderMarkdown(fullContent);
+                pending.appendChild(cursor);
                 messages.scrollTop = messages.scrollHeight;
               } else if (data.type === 'complete') {
+                cursor.remove();
                 pending.classList.add('copilot-chat-message--complete');
               } else if (data.type === 'error') {
+                cursor.remove();
                 pending.innerHTML = `<span class="copilot-chat-message--error">⚠ ${data.message}</span>`;
                 pending.classList.add('copilot-chat-message--error');
               }
@@ -325,6 +334,11 @@
     } catch (err) {
       pending.innerHTML = `<span class="copilot-chat-message--error">⚠ ${err.message || 'Network error'}</span>`;
       pending.classList.add('copilot-chat-message--error');
+    } finally {
+      prompt.disabled = false;
+      sendButton.disabled = false;
+      updateSendState();
+      prompt.focus();
     }
   }
 

@@ -17,6 +17,8 @@ import com.github.copilot.sdk.json.PermissionRequestResultKind;
 import com.github.copilot.sdk.json.SessionConfig;
 import com.github.copilot.sdk.json.SystemMessageConfig;
 import hudson.model.User;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -49,14 +51,21 @@ public class CopilotChatSessionService {
         return getOrCreateSession(user, configuration).thenCompose(session -> {
             StringBuilder response = new StringBuilder();
             CompletableFuture<String> done = new CompletableFuture<>();
-            session.session().on(AssistantMessageDeltaEvent.class, event -> response.append(event.getData().deltaContent()));
-            session.session().on(AssistantMessageEvent.class, event -> {
+            List<Closeable> listeners = new java.util.ArrayList<>();
+            listeners.add(session.session().on(AssistantMessageDeltaEvent.class, event -> response.append(event.getData().deltaContent())));
+            listeners.add(session.session().on(AssistantMessageEvent.class, event -> {
                 if (response.isEmpty()) {
                     response.append(event.getData().content());
                 }
-            });
-            session.session().on(SessionErrorEvent.class, event -> done.completeExceptionally(new IllegalStateException(event.getData().message())));
-            session.session().on(SessionIdleEvent.class, event -> done.complete(response.toString()));
+            }));
+            listeners.add(session.session().on(SessionErrorEvent.class, event -> {
+                closeQuietly(listeners);
+                done.completeExceptionally(new IllegalStateException(event.getData().message()));
+            }));
+            listeners.add(session.session().on(SessionIdleEvent.class, event -> {
+                closeQuietly(listeners);
+                done.complete(response.toString());
+            }));
             String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
             session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
             return done;
@@ -66,27 +75,42 @@ public class CopilotChatSessionService {
     public CompletableFuture<Void> sendStream(User user, CopilotChatConfiguration configuration, String prompt, String pagePath, Consumer<String> deltaConsumer, Consumer<String> completeConsumer, Consumer<Throwable> errorConsumer) {
         return getOrCreateSession(user, configuration).thenCompose(session -> {
             CompletableFuture<Void> done = new CompletableFuture<>();
-            session.session().on(AssistantMessageDeltaEvent.class, event -> {
+            List<Closeable> listeners = new java.util.ArrayList<>();
+            listeners.add(session.session().on(AssistantMessageDeltaEvent.class, event -> {
                 String delta = event.getData().deltaContent();
                 if (delta != null && !delta.isEmpty()) {
                     deltaConsumer.accept(delta);
                 }
-            });
-            session.session().on(AssistantMessageEvent.class, event -> {
+            }));
+            listeners.add(session.session().on(AssistantMessageEvent.class, event -> {
                 String content = event.getData().content();
                 if (content != null && !content.isEmpty()) {
                     completeConsumer.accept(content);
                 }
-            });
-            session.session().on(SessionErrorEvent.class, event -> {
+            }));
+            listeners.add(session.session().on(SessionErrorEvent.class, event -> {
+                closeQuietly(listeners);
                 errorConsumer.accept(new IllegalStateException(event.getData().message()));
                 done.completeExceptionally(new IllegalStateException(event.getData().message()));
-            });
-            session.session().on(SessionIdleEvent.class, event -> done.complete(null));
+            }));
+            listeners.add(session.session().on(SessionIdleEvent.class, event -> {
+                closeQuietly(listeners);
+                done.complete(null);
+            }));
             String enrichedPrompt = enrichPromptWithContext(prompt, pagePath);
             session.session().send(new MessageOptions().setPrompt(enrichedPrompt));
             return done;
         });
+    }
+
+    private static void closeQuietly(List<Closeable> closeables) {
+        for (Closeable c : closeables) {
+            try {
+                if (c != null) c.close();
+            } catch (IOException e) {
+                LOGGER.log(Level.FINE, "Failed to remove event listener", e);
+            }
+        }
     }
 
     private static String enrichPromptWithContext(String prompt, String pagePath) {

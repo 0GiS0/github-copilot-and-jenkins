@@ -465,6 +465,22 @@
   font-style: italic;
 }
 
+/* Streaming cursor */
+.copilot-chat-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 1.1em;
+  background: var(--text-color, #24292f);
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: copilot-cursor-blink 0.7s steps(2, start) infinite;
+}
+
+@keyframes copilot-cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 /* Markdown styles */
 .copilot-chat-message--markdown h1,
 .copilot-chat-message--markdown h2,
