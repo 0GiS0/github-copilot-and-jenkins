@@ -1,5 +1,6 @@
 # 🤖 GitHub Copilot CLI + Jenkins Integration Demo
 
+[![CI](https://github.com/0GiS0/github-copilot-and-jenkins/actions/workflows/ci.yml/badge.svg)](https://github.com/0GiS0/github-copilot-and-jenkins/actions/workflows/ci.yml)
 [![Jenkins](https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white)](https://www.jenkins.io/)
 [![GitHub Copilot](https://img.shields.io/badge/GitHub%20Copilot-000000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/features/copilot)
 [![DevContainer](https://img.shields.io/badge/DevContainer-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://containers.dev/)
