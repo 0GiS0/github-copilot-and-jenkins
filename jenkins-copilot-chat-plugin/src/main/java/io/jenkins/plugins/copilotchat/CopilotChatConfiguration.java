@@ -11,7 +11,7 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
 
     private String clientId;
     private String cliPath;
-    private String cliUrl;
+    private String cliUrl = "http://copilot-cli:3003";
     private String defaultModel = DEFAULT_MODEL;
     private String availableTools = "";
     private int requestTimeoutSeconds = 120;

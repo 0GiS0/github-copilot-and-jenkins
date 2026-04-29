@@ -2,6 +2,7 @@ services:
   devcontainer:
     image: mcr.microsoft.com/devcontainers/base:ubuntu
     command: sleep infinity
+    env_file: .env
     volumes:
       - ..:/workspace:cached
       - jenkins_home:/var/jenkins_home
@@ -16,7 +17,9 @@ services:
       dockerfile: Dockerfile.copilot-cli
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3003:3003"
+    environment:
+      - GITHUB_TOKEN=${GH_TOKEN:-}
     networks:
       - jenkins-net
 

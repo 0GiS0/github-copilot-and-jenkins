@@ -9,6 +9,7 @@ npm-debug.log*
 .env
 .env.local
 *.local
+.devcontainer/.env
 
 # IDE
 .idea/
