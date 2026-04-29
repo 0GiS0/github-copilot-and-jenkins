@@ -1,0 +1,7 @@
+FROM node:22-slim
+
+RUN npm install -g @github/copilot
+
+EXPOSE 3000
+
+ENTRYPOINT ["copilot", "--server", "--port", "3000", "--no-auto-update"]

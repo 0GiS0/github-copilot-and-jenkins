@@ -11,6 +11,7 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
 
     private String clientId;
     private String cliPath;
+    private String cliUrl;
     private String defaultModel = DEFAULT_MODEL;
     private String availableTools = "";
     private int requestTimeoutSeconds = 120;
@@ -47,6 +48,17 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     @DataBoundSetter
     public void setCliPath(String cliPath) {
         this.cliPath = normalize(cliPath);
+        save();
+    }
+
+    @CheckForNull
+    public String getCliUrl() {
+        return cliUrl;
+    }
+
+    @DataBoundSetter
+    public void setCliUrl(String cliUrl) {
+        this.cliUrl = normalize(cliUrl);
         save();
     }
 

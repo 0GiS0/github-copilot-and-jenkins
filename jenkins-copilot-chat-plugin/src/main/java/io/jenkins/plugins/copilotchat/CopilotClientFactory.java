@@ -19,7 +19,9 @@ public class CopilotClientFactory {
         }
         CopilotClientOptions options =
                 new CopilotClientOptions().setGitHubToken(token.get()).setUseLoggedInUser(false);
-        if (configuration.getCliPath() != null && !configuration.getCliPath().isBlank()) {
+        if (configuration.getCliUrl() != null && !configuration.getCliUrl().isBlank()) {
+            options.setCliUrl(configuration.getCliUrl());
+        } else if (configuration.getCliPath() != null && !configuration.getCliPath().isBlank()) {
             options.setCliPath(configuration.getCliPath());
         }
         return new CopilotClient(options);
