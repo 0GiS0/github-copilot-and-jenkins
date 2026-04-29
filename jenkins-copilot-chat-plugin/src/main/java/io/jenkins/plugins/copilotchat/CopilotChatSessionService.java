@@ -326,7 +326,7 @@ public class CopilotChatSessionService {
         if (configured != null && !configured.isBlank()) {
             return configured;
         }
-        return "http://localhost:8080/mcp-server/stateless";
+        return "http://jenkins:8080/mcp-server/stateless";
     }
 
     private static String buildJenkinsAuthHeader(CopilotChatConfiguration configuration) {

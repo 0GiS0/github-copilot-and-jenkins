@@ -17,10 +17,15 @@ public class CopilotClientFactory {
         if (token.isEmpty()) {
             throw new IllegalStateException("User is not authenticated with GitHub.");
         }
-        CopilotClientOptions options =
-                new CopilotClientOptions().setGitHubToken(token.get()).setUseLoggedInUser(false);
-        if (configuration.getCliPath() != null && !configuration.getCliPath().isBlank()) {
-            options.setCliPath(configuration.getCliPath());
+        CopilotClientOptions options = new CopilotClientOptions();
+        if (configuration.getCliUrl() != null && !configuration.getCliUrl().isBlank()) {
+            // Remote CLI server manages its own auth; token/useLoggedInUser are not allowed
+            options.setCliUrl(configuration.getCliUrl());
+        } else {
+            options.setGitHubToken(token.get()).setUseLoggedInUser(false);
+            if (configuration.getCliPath() != null && !configuration.getCliPath().isBlank()) {
+                options.setCliPath(configuration.getCliPath());
+            }
         }
         return new CopilotClient(options);
     }
