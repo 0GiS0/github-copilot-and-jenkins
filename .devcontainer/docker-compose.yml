@@ -23,10 +23,17 @@ services:
       - ./jenkins-config:/var/jenkins_config:ro
       - ..:/workspace:ro
     environment:
-      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false -Xms512m -Xmx1g -XX:+UseG1GC -XX:+AlwaysPreTouch
       - CASC_JENKINS_CONFIG=/var/jenkins_config/casc.yaml
       - GH_TOKEN=${GH_TOKEN:-}
-      
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1536M
+        reservations:
+          cpus: '1'
+          memory: 1024M
     networks:
       - jenkins-net
 

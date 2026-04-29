@@ -49,6 +49,26 @@ public class CopilotChatSessionService {
     }
 
     /**
+     * Eagerly start a Copilot session in the background so the CLI is already running when the user
+     * sends their first message.
+     */
+    public void warmUp(User user, CopilotChatConfiguration configuration) {
+        String model = configuration.getDefaultModel();
+        getOrCreateSession(user, configuration, model)
+                .thenRun(
+                        () ->
+                                LOGGER.log(
+                                        Level.INFO,
+                                        "Copilot session warmed up for {0}",
+                                        user.getId()))
+                .exceptionally(
+                        ex -> {
+                            LOGGER.log(Level.WARNING, "Failed to warm up Copilot session", ex);
+                            return null;
+                        });
+    }
+
+    /**
      * List available models for the user. Uses an existing session's client if available, otherwise
      * creates a temporary client.
      */

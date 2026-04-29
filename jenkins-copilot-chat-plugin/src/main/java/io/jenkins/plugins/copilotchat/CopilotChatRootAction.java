@@ -59,11 +59,20 @@ public class CopilotChatRootAction implements RootAction {
         if (loginId == null || loginId.isBlank()) {
             return error("loginId is required");
         }
-        return json(authService.pollLogin(requireUser(), loginId, CopilotChatConfiguration.get()));
+        LoginPollResult result =
+                authService.pollLogin(requireUser(), loginId, CopilotChatConfiguration.get());
+        if ("authenticated".equals(result.status())) {
+            chatService.warmUp(requireUser(), CopilotChatConfiguration.get());
+        }
+        return json(result);
     }
 
     public HttpResponse doAuthStatus() {
         Jenkins.get().checkPermission(Jenkins.READ);
+        boolean isAuthenticated = authService.getStoredIdentity(requireUser()).isPresent();
+        if (isAuthenticated) {
+            chatService.warmUp(requireUser(), CopilotChatConfiguration.get());
+        }
         return json(
                 authService
                         .getStoredIdentity(requireUser())
