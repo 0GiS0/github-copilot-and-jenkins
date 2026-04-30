@@ -1,7 +1,7 @@
 # 🔌 How Jenkins Plugins Work
 
 This document explains the key concepts behind Jenkins plugin development.
-Understanding these building blocks is essential to follow how the **Copilot Chat** plugin is structured.
+Understanding these building blocks is essential to follow how the **GitHubCopilot Chat** plugin is structured.
 
 ---
 
