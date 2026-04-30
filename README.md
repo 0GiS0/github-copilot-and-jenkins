@@ -39,6 +39,22 @@
 - [💻 Usage (EN)](#usage-en)
 - [📁 Project Structure (EN)](#structure-en)
 - [🤝 Contributing (EN)](#contributing-en)
+- [🇮🇹 Versione Italiana](#it)
+- [✨ Caratteristiche (IT)](#caratteristiche-it)
+- [🛠️ Tecnologie Utilizzate (IT)](#tecnologie-it)
+- [📋 Prerequisiti (IT)](#prerequisiti-it)
+- [🚀 Installazione (IT)](#installazione-it)
+- [💻 Utilizzo (IT)](#utilizzo-it)
+- [📁 Struttura del Progetto (IT)](#struttura-it)
+- [🤝 Contribuire (IT)](#contribuire-it)
+- [🇫🇷 Version Française](#fr)
+- [✨ Fonctionnalités (FR)](#fonctionnalites-fr)
+- [🛠️ Technologies Utilisées (FR)](#technologies-fr)
+- [📋 Prérequis (FR)](#prerequis-fr)
+- [🚀 Installation (FR)](#installation-fr)
+- [💻 Utilisation (FR)](#utilisation-fr)
+- [📁 Structure du Projet (FR)](#structure-fr)
+- [🤝 Contribuer (FR)](#contribuer-fr)
 - [🌐 Sígueme en Mis Redes Sociales](#-sígueme-en-mis-redes-sociales)
 
 ---
@@ -322,6 +338,284 @@ Contributions are welcome! If you want to improve this project:
 3. Commit your changes (`git commit -m "Add my improvement"`)
 4. Push to your branch (`git push origin feature/my-improvement`)
 5. Open a Pull Request
+
+---
+
+<a id="it"></a>
+## 🇮🇹 Versione Italiana
+
+<a id="caratteristiche-it"></a>
+### ✨ Caratteristiche (IT)
+
+- Demo completa di integrazione **GitHub Copilot + Jenkins**.
+- Plugin Jenkins in **Java 17** (`jenkins-copilot-chat-plugin`) con SDK Copilot.
+- Pipeline demo per **code review**, **documentazione** e **code analysis**.
+- App esempio **Node.js + TypeScript + Jest** in `src/`.
+- Script per installazione Copilot CLI e sincronizzazione del `GH_TOKEN` in Jenkins.
+
+<a id="tecnologie-it"></a>
+### 🛠️ Tecnologie Utilizzate (IT)
+
+- **Node.js** (LTS nel Dev Container)
+- **TypeScript 5.3.3**
+- **Jest 29.7.0**
+- **ESLint 8.56.0**
+- **Java 17**
+- **Maven** (plugin Jenkins HPI)
+- **Jenkins 2.479.3**
+- **Docker / Docker Compose**
+- **GitHub Actions**
+
+<a id="prerequisiti-it"></a>
+### 📋 Prerequisiti (IT)
+
+- **Git**
+- **Docker Desktop** (consigliato per setup completo)
+- **VS Code** + estensione **Dev Containers**
+- **GH_TOKEN** con permessi repository e **Copilot Requests**
+
+Opzionale per esecuzione locale senza Dev Container:
+
+- **Node.js 20+**
+- **npm**
+- **Java 17** e **Maven** (per compilare il plugin)
+
+<a id="installazione-it"></a>
+### 🚀 Installazione (IT)
+
+### Passo 1: Clonare il repository
+```bash
+git clone https://github.com/0GiS0/github-copilot-and-jenkins.git
+cd github-copilot-and-jenkins
+```
+
+### Passo 2: Configurare il token GitHub
+```bash
+# macOS/Linux
+export GH_TOKEN="il_tuo_token"
+
+# Windows PowerShell
+$env:GH_TOKEN="il_tuo_token"
+```
+
+### Passo 3 (consigliato): Aprire nel Dev Container
+```bash
+code .
+```
+
+Poi seleziona **Reopen in Container** in VS Code.
+
+### Passo 4 (alternativa Docker Compose)
+```bash
+cd .devcontainer
+docker compose up -d --build
+```
+
+Jenkins sarà disponibile su `http://localhost:8081` (`admin` / `admin`).
+
+### Passo 5: Installare le dipendenze Node.js
+```bash
+npm install
+```
+
+### Passo 6: Sincronizzare il token con Jenkins (se necessario)
+```bash
+./scripts/sync-jenkins-gh-token.sh
+```
+
+<a id="utilizzo-it"></a>
+### 💻 Utilizzo (IT)
+
+Comandi principali:
+
+```bash
+npm run dev
+npm run build
+npm start
+npm test
+npm run lint
+npm run clean
+```
+
+Pipeline demo incluse:
+
+- `pipelines/code-review.jenkinsfile`
+- `pipelines/docs-generator.jenkinsfile`
+- `pipelines/code-analysis.jenkinsfile`
+- `Jenkinsfile` (orchestrazione principale con `DEMO_TYPE`)
+
+<a id="struttura-it"></a>
+### 📁 Struttura del Progetto (IT)
+
+```text
+.
+├── .devcontainer/
+├── .github/workflows/
+├── jenkins-copilot-chat-plugin/
+├── pipelines/
+├── scripts/
+├── src/
+├── Jenkinsfile
+├── package.json
+└── tsconfig.json
+```
+
+<a id="contribuire-it"></a>
+### 🤝 Contribuire (IT)
+
+I contributi sono benvenuti! Per migliorare questo progetto:
+
+1. Fai un fork del repository
+2. Crea un branch feature (`git checkout -b feature/mio-miglioramento`)
+3. Commit delle modifiche (`git commit -m "Aggiunge miglioramento"`)
+4. Push del branch (`git push origin feature/mio-miglioramento`)
+5. Apri una Pull Request
+
+---
+
+<a id="fr"></a>
+## 🇫🇷 Version Française
+
+<a id="fonctionnalites-fr"></a>
+### ✨ Fonctionnalités (FR)
+
+- Plugin **Copilot Chat** pour Jenkins (Java) avec réponses en streaming.
+- Intégration avec le **SDK Java GitHub Copilot** et support des outils MCP.
+- Pipelines de démonstration pour la **revue de code**, la **génération de documentation** et l'**analyse de code**.
+- Environnement reproductible avec **Dev Container + Docker Compose**.
+- Application exemple **Node.js + TypeScript + Jest** pour expérimenter des prompts et des flux CI.
+- Synchronisation automatique du `GH_TOKEN` avec les credentials Jenkins via script.
+
+<a id="technologies-fr"></a>
+### 🛠️ Technologies Utilisées (FR)
+
+- **Node.js** (LTS, configuré dans le Dev Container)
+- **TypeScript 5.3.3**
+- **Jest 29.7.0**
+- **ESLint 8.56.0**
+- **Java 17**
+- **Maven** (plugin Jenkins HPI)
+- **Jenkins 2.479.3**
+- **Docker / Docker Compose**
+- **GitHub Actions** (`.github/workflows/ci.yml`)
+
+<a id="prerequis-fr"></a>
+### 📋 Prérequis (FR)
+
+- **Git**
+- **Docker Desktop** (recommandé pour démarrer l'environnement complet)
+- **VS Code** + extension **Dev Containers** (méthode recommandée)
+- **GH_TOKEN** avec accès dépôt et permissions **Copilot Requests**
+
+Optionnel (exécution locale sans Dev Container) :
+
+- **Node.js 20+** et **npm**
+- **Java 17** et **Maven** (pour compiler le plugin)
+
+<a id="installation-fr"></a>
+### 🚀 Installation (FR)
+
+### Étape 1 : Cloner le dépôt
+```bash
+git clone https://github.com/0GiS0/github-copilot-and-jenkins.git
+cd github-copilot-and-jenkins
+```
+
+### Étape 2 : Configurer le token GitHub
+```bash
+# macOS/Linux
+export GH_TOKEN="votre_token_ici"
+
+# Windows PowerShell
+$env:GH_TOKEN="votre_token_ici"
+```
+
+### Étape 3 (recommandé) : Ouvrir dans le Dev Container
+```bash
+code .
+```
+Puis sélectionnez **Reopen in Container** dans VS Code.
+
+### Étape 4 (alternative Docker Compose)
+```bash
+cd .devcontainer
+docker compose up -d --build
+```
+Jenkins sera disponible sur `http://localhost:8081` (utilisateur `admin`, mot de passe `admin`).
+
+### Étape 5 : Installer les dépendances Node.js
+```bash
+npm install
+```
+
+### Étape 6 : Synchroniser le token avec Jenkins (si nécessaire)
+```bash
+./scripts/sync-jenkins-gh-token.sh
+```
+
+<a id="utilisation-fr"></a>
+### 💻 Utilisation (FR)
+
+Commandes principales du projet :
+
+```bash
+npm run dev     # Lance la démo TypeScript
+npm run build   # Compile TypeScript vers dist/
+npm start       # Exécute dist/index.js
+npm test        # Lance les tests avec Jest
+npm run lint    # Analyse statique sur src/**/*.ts
+npm run clean   # Supprime dist/
+```
+
+Pipelines de démonstration inclus :
+
+- `pipelines/code-review.jenkinsfile`
+- `pipelines/docs-generator.jenkinsfile`
+- `pipelines/code-analysis.jenkinsfile`
+- `Jenkinsfile` (orchestrateur principal avec `DEMO_TYPE`)
+
+<a id="structure-fr"></a>
+### 📁 Structure du Projet (FR)
+
+```text
+.
+├── .devcontainer/
+│   ├── devcontainer.json
+│   ├── docker-compose.yml
+│   ├── Dockerfile.devcontainer
+│   ├── Dockerfile.jenkins
+│   └── jenkins-config/
+├── .github/workflows/
+│   └── ci.yml
+├── jenkins-copilot-chat-plugin/
+│   ├── pom.xml
+│   └── src/
+├── pipelines/
+│   ├── code-analysis.jenkinsfile
+│   ├── code-review.jenkinsfile
+│   └── docs-generator.jenkinsfile
+├── scripts/
+│   ├── install-copilot-cli.sh
+│   └── sync-jenkins-gh-token.sh
+├── src/
+│   ├── index.ts
+│   ├── utils.ts
+│   └── utils.test.ts
+├── Jenkinsfile
+├── package.json
+└── tsconfig.json
+```
+
+<a id="contribuer-fr"></a>
+### 🤝 Contribuer (FR)
+
+Les contributions sont les bienvenues ! Pour améliorer ce projet :
+
+1. Faites un fork du dépôt
+2. Créez une branche pour votre fonctionnalité (`git checkout -b feature/mon-amelioration`)
+3. Commitez vos changements (`git commit -m 'Ajouter mon amélioration'`)
+4. Poussez la branche (`git push origin feature/mon-amelioration`)
+5. Ouvrez une Pull Request
 
 ---
 
