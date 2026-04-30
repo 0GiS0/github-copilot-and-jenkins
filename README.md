@@ -39,6 +39,7 @@
 - [💻 Usage (EN)](#usage-en)
 - [📁 Project Structure (EN)](#structure-en)
 - [🤝 Contributing (EN)](#contributing-en)
+- [📚 Documentation](#-documentation)
 - [🌐 Sígueme en Mis Redes Sociales](#-sígueme-en-mis-redes-sociales)
 
 ---
@@ -322,6 +323,17 @@ Contributions are welcome! If you want to improve this project:
 3. Commit your changes (`git commit -m "Add my improvement"`)
 4. Push to your branch (`git push origin feature/my-improvement`)
 5. Open a Pull Request
+
+---
+
+## 📚 Documentation
+
+In-depth guides are split into separate files to keep this README concise:
+
+| Guide | Description |
+|-------|-------------|
+| [🔌 How Jenkins Plugins Work](docs/how-jenkins-plugins-work.md) | Extension points, Stapler MVC, Jelly templates, `GlobalConfiguration`, `UserProperty`, `PageDecorator` — the fundamentals you need to understand any Jenkins plugin. |
+| [🤖 Copilot Chat Plugin — Internals](docs/copilot-chat-plugin-internals.md) | How all those building blocks were applied to build this plugin: GitHub OAuth Device Flow, SDK session lifecycle, MCP server wiring, Server-Sent Events streaming, and security model. |
 
 ---
 
