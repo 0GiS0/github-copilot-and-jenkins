@@ -66,7 +66,7 @@ Build: #${BUILD_NUMBER}
 
 EOF
 
-                    if git log -1 --pretty=%B | grep -q '\[skip docs-generator\]'; then
+                    if git log -1 --pretty=%B | grep -Fq '[skip docs-generator]'; then
                         cat > reports/pr-context.env <<'EOF'
 SKIP_DOCS_GENERATOR=true
 PR_NUMBER=
