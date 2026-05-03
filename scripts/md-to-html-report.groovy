@@ -46,8 +46,13 @@ static String renderInline(String text) {
         }
         int nextCode = text.indexOf('`', i)
         int nextBold = text.indexOf('**', i)
-        def candidates = ([nextCode, nextBold] as List).findAll { it != -1 }
-        int nextMarker = candidates ? candidates.min() : text.length()
+        int nextMarker = text.length()
+        if (nextCode != -1 && nextCode < nextMarker) {
+            nextMarker = nextCode
+        }
+        if (nextBold != -1 && nextBold < nextMarker) {
+            nextMarker = nextBold
+        }
         if (nextMarker == i) {
             result.append(escapeHtml(text[i] as String))
             i++
@@ -105,8 +110,16 @@ static String renderMarkdown(String source) {
 
         // Tables
         if (stripped.startsWith('|') && stripped.endsWith('|')) {
-            def cells = stripped[1..-2].split('\\|').collect { renderInline(it.trim()) }
-            if (cells.every { it.replaceAll('[-:]', '').trim().isEmpty() }) { continue }
+            def cells = []
+            boolean separatorRow = true
+            for (cell in stripped[1..-2].split('\\|')) {
+                String renderedCell = renderInline(cell.trim())
+                cells << renderedCell
+                if (!renderedCell.replace('-', '').replace(':', '').trim().isEmpty()) {
+                    separatorRow = false
+                }
+            }
+            if (separatorRow) { continue }
             if (!inTable) {
                 closeBlocks()
                 output << '<div class="table-wrap"><table><tbody>'
@@ -115,7 +128,12 @@ static String renderMarkdown(String source) {
             }
             String tag = !tableHasHeader ? 'th' : 'td'
             tableHasHeader = true
-            output << '<tr>' + cells.collect { "<${tag}>${it}</${tag}>" }.join('') + '</tr>'
+            def row = new StringBuilder('<tr>')
+            for (cell in cells) {
+                row.append("<${tag}>${cell}</${tag}>")
+            }
+            row.append('</tr>')
+            output << row.toString()
             continue
         }
 
@@ -147,10 +165,15 @@ static String renderMarkdown(String source) {
     if (inCode) { output << '</code></pre>' }
     closeBlocks()
     closeSection()
-    output.join('\n')
+    def rendered = new StringBuilder()
+    for (int index = 0; index < output.size(); index++) {
+        if (index > 0) {
+            rendered.append('\n')
+        }
+        rendered.append(output[index])
+    }
+    rendered.toString()
 }
-
-private static final String CSS_PATH = 'scripts/report.css'
 
 /**
  * Converts a Markdown file to a styled HTML report.
@@ -161,7 +184,8 @@ private static final String CSS_PATH = 'scripts/report.css'
  */
 void convert(String mdPath, String htmlPath, String title) {
     String markdown = readFile(file: mdPath, encoding: 'UTF-8')
-    String css = readFile(file: CSS_PATH, encoding: 'UTF-8')
+    String cssSource = fileExists('reports/report-source.css') ? 'reports/report-source.css' : 'scripts/report.css'
+    String css = readFile(file: cssSource, encoding: 'UTF-8')
     String body = renderMarkdown(markdown)
     String safeTitle = escapeHtml(title)
 
