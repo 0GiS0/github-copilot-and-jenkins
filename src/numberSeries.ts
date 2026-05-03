@@ -1,10 +1,24 @@
+/**
+ * Statistical summary of a numeric series.
+ */
 export interface NumberSeriesSummary {
+  /** Number of values in the series. */
   count: number;
+  /** Smallest value in the series. */
   minimum: number;
+  /** Largest value in the series. */
   maximum: number;
+  /** Sum of all values in the series. */
   total: number;
 }
 
+/**
+ * Computes a statistical summary (count, min, max, total) for an array of numbers.
+ * Returns all-zero values for an empty array.
+ *
+ * @param values - Array of numbers to summarize.
+ * @returns A {@link NumberSeriesSummary} describing the series.
+ */
 export function summarizeNumberSeries(values: number[]): NumberSeriesSummary {
   if (values.length === 0) {
     return {
@@ -28,6 +42,13 @@ export function summarizeNumberSeries(values: number[]): NumberSeriesSummary {
   });
 }
 
+/**
+ * Normalizes an array of numbers to the [0, 1] range using min-max scaling.
+ * Returns an array of zeros if the input is empty or all values are equal.
+ *
+ * @param values - Array of numbers to normalize.
+ * @returns A new array with each value scaled to [0, 1].
+ */
 export function normalizeNumberSeries(values: number[]): number[] {
   const summary = summarizeNumberSeries(values);
   const range = summary.maximum - summary.minimum;
