@@ -477,6 +477,8 @@ EOF
                     result_line="No documentation changes were committed."
                     if [ "$DOCS_GENERATOR_COMMITTED" = "true" ]; then
                         result_line="Committed generated documentation/comment updates: ${DOCS_GENERATOR_COMMIT}."
+                    elif [ "$SKIP_DOCS_GENERATOR" = "true" ]; then
+                        result_line="Skipped generation because the PR head commit contains [skip docs-generator]."
                     elif [ "$CAN_WRITE" != "true" ]; then
                         result_line="Skipped write-back because the PR author is not allowed or the PR is cross-repository."
                     fi
