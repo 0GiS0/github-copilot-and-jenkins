@@ -20,27 +20,30 @@ import org.kohsuke.stapler.StaplerResponse2;
  * 🌐 The main REST controller and navigation entry point for the Copilot Chat plugin.
  *
  * <h2>Role in Jenkins</h2>
+ *
  * <p>A Jenkins {@link RootAction} is an extension that:
+ *
  * <ul>
- *   <li>Adds a top-level URL under Jenkins root (here: {@code /copilot-chat/}).</li>
- *   <li>Optionally adds an icon and link to the Jenkins side panel (if
- *       {@link #getIconFileName()} returns a non-null value).</li>
- *   <li>Acts as a Stapler MVC controller: public {@code doXxx()} methods are
- *       automatically mapped to {@code /copilot-chat/xxx} HTTP endpoints.</li>
+ *   <li>Adds a top-level URL under Jenkins root (here: {@code /copilot-chat/}).
+ *   <li>Optionally adds an icon and link to the Jenkins side panel (if {@link #getIconFileName()}
+ *       returns a non-null value).
+ *   <li>Acts as a Stapler MVC controller: public {@code doXxx()} methods are automatically mapped
+ *       to {@code /copilot-chat/xxx} HTTP endpoints.
  * </ul>
  *
  * <h2>Endpoints exposed</h2>
+ *
  * <ul>
- *   <li>📲 {@code GET  /copilot-chat/startLogin}  — starts the GitHub Device Flow</li>
- *   <li>🔄 {@code GET  /copilot-chat/pollLogin}   — polls for Device Flow completion</li>
- *   <li>ℹ️ {@code GET  /copilot-chat/authStatus}  — returns current auth state</li>
- *   <li>🚪 {@code GET  /copilot-chat/logout}      — removes stored token</li>
- *   <li>🤖 {@code GET  /copilot-chat/models}      — lists available AI models</li>
- *   <li>💬 {@code POST /copilot-chat/sendMessage} — streams a chat response via SSE</li>
+ *   <li>📲 {@code GET /copilot-chat/startLogin} — starts the GitHub Device Flow
+ *   <li>🔄 {@code GET /copilot-chat/pollLogin} — polls for Device Flow completion
+ *   <li>ℹ️ {@code GET /copilot-chat/authStatus} — returns current auth state
+ *   <li>🚪 {@code GET /copilot-chat/logout} — removes stored token
+ *   <li>🤖 {@code GET /copilot-chat/models} — lists available AI models
+ *   <li>💬 {@code POST /copilot-chat/sendMessage} — streams a chat response via SSE
  * </ul>
  *
- * <p>All endpoints require {@link Jenkins#READ} permission — any authenticated Jenkins user
- * can use the chat, but anonymous access is blocked.
+ * <p>All endpoints require {@link Jenkins#READ} permission — any authenticated Jenkins user can use
+ * the chat, but anonymous access is blocked.
  */
 @Extension
 public class CopilotChatRootAction implements RootAction {
@@ -52,9 +55,9 @@ public class CopilotChatRootAction implements RootAction {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * 🎨 The icon shown in the Jenkins sidebar.
-     * Uses Jenkins' symbol icon system — the value refers to a symbol named {@code copilot-chat}
-     * registered by this plugin's own resources (see {@code images/symbols/}).
+     * 🎨 The icon shown in the Jenkins sidebar. Uses Jenkins' symbol icon system — the value refers
+     * to a symbol named {@code copilot-chat} registered by this plugin's own resources (see {@code
+     * images/symbols/}).
      */
     @Override
     public String getIconFileName() {
@@ -68,8 +71,8 @@ public class CopilotChatRootAction implements RootAction {
     }
 
     /**
-     * 🌐 The URL segment under Jenkins root where this action is mounted.
-     * Full URL will be: {@code http://jenkins:8080/copilot-chat/}.
+     * 🌐 The URL segment under Jenkins root where this action is mounted. Full URL will be: {@code
+     * http://jenkins:8080/copilot-chat/}.
      */
     @Override
     public String getUrlName() {
@@ -113,8 +116,8 @@ public class CopilotChatRootAction implements RootAction {
     /**
      * ℹ️ Returns the current authentication status for the logged-in Jenkins user.
      *
-     * <p>The browser calls this on page load to decide whether to show the login button
-     * or the chat interface.
+     * <p>The browser calls this on page load to decide whether to show the login button or the chat
+     * interface.
      */
     public HttpResponse doAuthStatus() {
         Jenkins.get().checkPermission(Jenkins.READ);
@@ -143,10 +146,9 @@ public class CopilotChatRootAction implements RootAction {
     /**
      * 🤖 Returns the list of AI models available to the current user.
      *
-     * <p>Models are fetched from the Copilot API via the SDK. The list depends on
-     * the user's GitHub Copilot subscription level.
-     * The response also includes the currently configured default model so the UI
-     * can pre-select it.
+     * <p>Models are fetched from the Copilot API via the SDK. The list depends on the user's GitHub
+     * Copilot subscription level. The response also includes the currently configured default model
+     * so the UI can pre-select it.
      */
     public HttpResponse doModels() {
         Jenkins.get().checkPermission(Jenkins.READ);
@@ -183,18 +185,18 @@ public class CopilotChatRootAction implements RootAction {
      * 💬 Handles an incoming chat message and streams the AI response via Server-Sent Events.
      *
      * <p>Flow:
+     *
      * <ol>
-     *   <li>Deserialize the {@link MessageRequest} JSON body from the HTTP request.</li>
-     *   <li>Validate that the prompt is not blank.</li>
-     *   <li>Open a {@link StreamingHttpResponse} that writes SSE events.</li>
+     *   <li>Deserialize the {@link MessageRequest} JSON body from the HTTP request.
+     *   <li>Validate that the prompt is not blank.
+     *   <li>Open a {@link StreamingHttpResponse} that writes SSE events.
      *   <li>Pass four callbacks to {@link CopilotChatSessionService#sendStream}:
      *       <ul>
-     *         <li>📝 {@code delta} — partial text chunks as they arrive (streamed token-by-token)</li>
-     *         <li>🧠 {@code reasoning} — optional thinking steps from reasoning models</li>
-     *         <li>✅ {@code complete} — signals the end of the response</li>
-     *         <li>❌ {@code error} — sends an error event if something goes wrong</li>
+     *         <li>📝 {@code delta} — partial text chunks as they arrive (streamed token-by-token)
+     *         <li>🧠 {@code reasoning} — optional thinking steps from reasoning models
+     *         <li>✅ {@code complete} — signals the end of the response
+     *         <li>❌ {@code error} — sends an error event if something goes wrong
      *       </ul>
-     *   </li>
      * </ol>
      */
     public void doSendMessage(StaplerRequest2 request, StaplerResponse2 response)
@@ -328,9 +330,8 @@ public class CopilotChatRootAction implements RootAction {
     }
 
     /**
-     * 👤 Returns the currently logged-in Jenkins user.
-     * Throws an {@link IllegalStateException} if called outside a request context
-     * (e.g. background threads), acting as a safety guard.
+     * 👤 Returns the currently logged-in Jenkins user. Throws an {@link IllegalStateException} if
+     * called outside a request context (e.g. background threads), acting as a safety guard.
      */
     private User requireUser() {
         User user = User.current();

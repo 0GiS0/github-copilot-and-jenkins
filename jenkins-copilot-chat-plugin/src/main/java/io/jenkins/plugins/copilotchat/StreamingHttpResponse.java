@@ -10,25 +10,27 @@ import org.kohsuke.stapler.StaplerResponse2;
 /**
  * 📶 A Stapler {@link HttpResponse} that streams data using Server-Sent Events (SSE).
  *
- * <p>Server-Sent Events is a W3C standard that allows a server to push a stream of text events
- * to the browser over a single long-lived HTTP connection. The browser-side JavaScript reads
- * these events with {@code new EventSource(...)} or by parsing {@code fetch()} responses.
+ * <p>Server-Sent Events is a W3C standard that allows a server to push a stream of text events to
+ * the browser over a single long-lived HTTP connection. The browser-side JavaScript reads these
+ * events with {@code new EventSource(...)} or by parsing {@code fetch()} responses.
  *
  * <p>Each event is written to the response in the following format:
- * <pre>{@code
- *   data: {"type":"delta","content":"Hello"}
  *
- *   data: {"type":"complete"}
+ * <pre>{@code
+ * data: {"type":"delta","content":"Hello"}
+ *
+ * data: {"type":"complete"}
  *
  * }</pre>
+ *
  * (Note the blank line between events — that is how SSE separates events.)
  *
- * <p>The headers set by {@link #generateResponse} tell the browser and any reverse proxies
- * (e.g. nginx with {@code X-Accel-Buffering: no}) not to buffer the response so that chunks
- * arrive at the client as soon as they are written.
+ * <p>The headers set by {@link #generateResponse} tell the browser and any reverse proxies (e.g.
+ * nginx with {@code X-Accel-Buffering: no}) not to buffer the response so that chunks arrive at the
+ * client as soon as they are written.
  *
- * <p>The actual writing logic is provided by the {@code streamHandler} lambda, which receives
- * the response {@link PrintWriter} and writes as many events as needed.
+ * <p>The actual writing logic is provided by the {@code streamHandler} lambda, which receives the
+ * response {@link PrintWriter} and writes as many events as needed.
  */
 public class StreamingHttpResponse implements HttpResponse {
     private final Consumer<PrintWriter> streamHandler;
@@ -46,10 +48,11 @@ public class StreamingHttpResponse implements HttpResponse {
      * 🚀 Sets up the SSE response headers and delegates writing to the stream handler.
      *
      * <p>Important headers:
+     *
      * <ul>
-     *   <li>{@code Content-Type: text/event-stream} — signals to the browser that this is SSE</li>
-     *   <li>{@code Cache-Control: no-cache} — prevents caching of live events</li>
-     *   <li>{@code X-Accel-Buffering: no} — disables nginx buffering so chunks are not held back</li>
+     *   <li>{@code Content-Type: text/event-stream} — signals to the browser that this is SSE
+     *   <li>{@code Cache-Control: no-cache} — prevents caching of live events
+     *   <li>{@code X-Accel-Buffering: no} — disables nginx buffering so chunks are not held back
      * </ul>
      */
     @Override
