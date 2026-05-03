@@ -1,4 +1,4 @@
-import { sum, average, isValidEmail, generateRandomString, deepClone, formatDate } from './utils';
+import { sum, average, clamp, isValidEmail, generateRandomString, deepClone, formatDate } from './utils';
 
 describe('Utils', () => {
   describe('sum', () => {
@@ -22,6 +22,14 @@ describe('Utils', () => {
 
     it('should return 0 for empty array', () => {
       expect(average([])).toBe(0);
+    });
+  });
+
+  describe('clamp', () => {
+    it('should keep values inside the configured range', () => {
+      expect(clamp(5, 0, 10)).toBe(5);
+      expect(clamp(-2, 0, 10)).toBe(0);
+      expect(clamp(12, 0, 10)).toBe(10);
     });
   });
 

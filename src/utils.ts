@@ -19,6 +19,13 @@ export function average(numbers: number[]): number {
 }
 
 /**
+ * Clamp a number between minimum and maximum bounds
+ */
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+/**
  * Format a date to a readable string
  */
 export function formatDate(date: Date): string {
