@@ -184,7 +184,8 @@ static String renderMarkdown(String source) {
  */
 void convert(String mdPath, String htmlPath, String title) {
     String markdown = readFile(file: mdPath, encoding: 'UTF-8')
-    String css = readFile(file: 'scripts/report.css', encoding: 'UTF-8')
+    String cssSource = fileExists('reports/report-source.css') ? 'reports/report-source.css' : 'scripts/report.css'
+    String css = readFile(file: cssSource, encoding: 'UTF-8')
     String body = renderMarkdown(markdown)
     String safeTitle = escapeHtml(title)
 

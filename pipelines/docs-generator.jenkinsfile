@@ -38,6 +38,8 @@ pipeline {
                 echo '📦 Checking GitHub Copilot CLI installation...'
                 sh '''
                     mkdir -p docs reports
+                    cp scripts/md-to-html-report.groovy reports/md-to-html-report.groovy
+                    cp scripts/report.css reports/report-source.css
 
                     if ! command -v copilot >/dev/null 2>&1; then
                         echo "Installing GitHub Copilot CLI..."
@@ -423,7 +425,7 @@ EOF
             echo '📁 Archiving documentation and report...'
             script {
                 if (fileExists('reports/docs-generator.md')) {
-                    def report = load 'scripts/md-to-html-report.groovy'
+                    def report = load 'reports/md-to-html-report.groovy'
                     report.convert('reports/docs-generator.md', 'reports/docs-generator.html', 'Documentation Generator Report')
                 }
             }
