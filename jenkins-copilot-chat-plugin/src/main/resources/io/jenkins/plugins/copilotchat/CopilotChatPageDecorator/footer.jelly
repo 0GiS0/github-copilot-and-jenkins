@@ -19,6 +19,9 @@
           <select id="copilot-chat-model-selector" class="copilot-chat-model-selector" title="Select AI model" hidden="hidden">
             <option value="">Loading...</option>
           </select>
+          <button id="copilot-chat-new-conversation" class="copilot-chat-icon-button" type="button" title="New conversation" aria-label="New conversation">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
           <button id="copilot-chat-logout-button" class="copilot-chat-icon-button" type="button" title="Sign out" aria-label="Sign out" hidden="hidden">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
           </button>

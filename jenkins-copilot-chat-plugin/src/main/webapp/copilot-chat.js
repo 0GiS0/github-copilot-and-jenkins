@@ -53,6 +53,8 @@
   let currentUserLogin = '';
   let selectedModel = localStorage.getItem('copilot-chat-model') || '';
   let availableModels = [];
+  const CHAT_STORAGE_KEY = 'copilot-chat-history';
+  const newConversationButton = document.getElementById('copilot-chat-new-conversation');
 
   // Get model selector from DOM
   const modelSelector = document.getElementById('copilot-chat-model-selector');
@@ -220,6 +222,74 @@
     }
   }
 
+  function saveHistory() {
+    try {
+      const entries = [];
+      messages.querySelectorAll('.copilot-chat-message-row').forEach(row => {
+        const kind = row.classList.contains('copilot-chat-message-row--user') ? 'user'
+          : row.classList.contains('copilot-chat-message-row--assistant') ? 'assistant'
+          : 'system';
+        const msg = row.querySelector('.copilot-chat-message');
+        if (!msg) return;
+        // Skip loading placeholders
+        if (msg.querySelector('.copilot-chat-loading__text')) return;
+        const html = msg.innerHTML;
+        entries.push({ kind, html });
+      });
+      sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(entries));
+    } catch (e) {
+      // sessionStorage may be full or disabled
+    }
+  }
+
+  function restoreHistory() {
+    try {
+      const data = sessionStorage.getItem(CHAT_STORAGE_KEY);
+      if (!data) return;
+      const entries = JSON.parse(data);
+      entries.forEach(entry => {
+        const wrapper = document.createElement('div');
+        wrapper.className = `copilot-chat-message-row copilot-chat-message-row--${entry.kind}`;
+        if (entry.kind === 'user' || entry.kind === 'assistant') {
+          const avatar = document.createElement('div');
+          avatar.className = 'copilot-chat-avatar';
+          if (entry.kind === 'assistant') {
+            const img = document.createElement('img');
+            img.src = copilotLogoUrl;
+            img.alt = 'Copilot';
+            img.className = 'copilot-chat-avatar__img';
+            avatar.appendChild(img);
+          } else if (currentUserAvatar) {
+            const img = document.createElement('img');
+            img.src = currentUserAvatar;
+            img.alt = currentUserLogin;
+            img.className = 'copilot-chat-avatar__img';
+            avatar.appendChild(img);
+          } else {
+            avatar.innerHTML = `<span class="copilot-chat-avatar__initials">${(currentUserLogin || 'U').charAt(0).toUpperCase()}</span>`;
+          }
+          wrapper.appendChild(avatar);
+        }
+        const message = document.createElement('div');
+        message.className = `copilot-chat-message copilot-chat-message--${entry.kind}`;
+        if (entry.kind === 'assistant') {
+          message.classList.add('copilot-chat-message--markdown', 'copilot-chat-message--complete');
+        }
+        message.innerHTML = entry.html;
+        wrapper.appendChild(message);
+        messages.appendChild(wrapper);
+      });
+      messages.scrollTop = messages.scrollHeight;
+    } catch (e) {
+      // corrupted data – ignore
+    }
+  }
+
+  function clearHistory() {
+    sessionStorage.removeItem(CHAT_STORAGE_KEY);
+    messages.innerHTML = '';
+  }
+
   function addMessage(kind, text, isLoading = false) {
     const wrapper = document.createElement('div');
     wrapper.className = `copilot-chat-message-row copilot-chat-message-row--${kind}`;
@@ -262,6 +332,7 @@
     wrapper.appendChild(message);
     messages.appendChild(wrapper);
     messages.scrollTop = messages.scrollHeight;
+    if (!isLoading) saveHistory();
     return message;
   }
 
@@ -412,6 +483,7 @@
               } else if (data.type === 'complete') {
                 cursor.remove();
                 pending.classList.add('copilot-chat-message--complete');
+                saveHistory();
               } else if (data.type === 'error') {
                 cursor.remove();
                 pending.innerHTML = `<span class="copilot-chat-message--error">⚠ ${data.message}</span>`;
@@ -459,6 +531,9 @@
   loginButton.addEventListener('click', startLogin);
   logoutButton.addEventListener('click', logout);
   form.addEventListener('submit', sendMessage);
+  if (newConversationButton) {
+    newConversationButton.addEventListener('click', clearHistory);
+  }
 
   if (copyButton) {
     copyButton.addEventListener('click', async () => {
@@ -532,6 +607,8 @@
       document.addEventListener('pointerup', stopResize);
     });
   }
+
+  restoreHistory();
 
   refreshStatus().catch((error) => {
     status.textContent = error.message || 'Unable to load status';
