@@ -80,7 +80,7 @@ CAN_WRITE=false
 EOF
                         echo "## Result" >> reports/docs-generator.md
                         echo "" >> reports/docs-generator.md
-                        echo "Skipped because latest commit contains \`[skip docs-generator]\`." >> reports/docs-generator.md
+                        echo "Skipped because latest commit contains [skip docs-generator]." >> reports/docs-generator.md
                         exit 0
                     fi
 
