@@ -190,6 +190,7 @@ NODE
                         exit 0
                     fi
 
+                    git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git"
                     git fetch origin "$HEAD_BRANCH"
                     git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
 
