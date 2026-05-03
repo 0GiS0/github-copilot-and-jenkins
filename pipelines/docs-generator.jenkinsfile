@@ -212,12 +212,24 @@ NODE
                         [ -n "$file" ] && [ -f "$file" ] && printf '%s\n' "$file"
                     done < reports/doc-candidates.raw > reports/doc-candidates.txt
 
+                    grep -E '^(src|jenkins-copilot-chat-plugin/src)/.*[.](ts|js|java)$' reports/doc-candidates.txt \
+                        | grep -Ev '(^|[.])(test|spec)[.](ts|js|java)$' > reports/comment-candidates.txt || true
+
                     echo "## Changed Files Considered" >> reports/docs-generator.md
                     echo "" >> reports/docs-generator.md
                     if [ -s reports/doc-candidates.txt ]; then
                         sed 's/^/- /' reports/doc-candidates.txt >> reports/docs-generator.md
                     else
                         echo "No documentation-relevant changed files were found." >> reports/docs-generator.md
+                    fi
+                    echo "" >> reports/docs-generator.md
+
+                    echo "## Source Files Eligible For Documentation Comments" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+                    if [ -s reports/comment-candidates.txt ]; then
+                        sed 's/^/- /' reports/comment-candidates.txt >> reports/docs-generator.md
+                    else
+                        echo "No changed source files were eligible for documentation comments." >> reports/docs-generator.md
                     fi
                     echo "" >> reports/docs-generator.md
                 '''
@@ -291,7 +303,7 @@ EOF
                     . reports/pr-context.env
                     [ "$CAN_WRITE" = "true" ] || exit 0
 
-                    grep -E '^(src|jenkins-copilot-chat-plugin/src)/.*[.](ts|js|java)$' reports/doc-candidates.txt > reports/api-candidates.txt || true
+                    cp reports/comment-candidates.txt reports/api-candidates.txt
                     if [ ! -s reports/api-candidates.txt ]; then
                         echo "## API Documentation" >> reports/docs-generator.md
                         echo "" >> reports/docs-generator.md
@@ -301,9 +313,14 @@ EOF
                     fi
 
                     cat > reports/api-prompt.md <<'EOF'
-Review the changed source files from this pull request and update API documentation only when the changes expose or alter behavior worth documenting.
-Create or update docs/API.md. Do not modify source code, package files, Jenkinsfiles, README files, or files outside docs/.
-Do not include timestamps. Keep the documentation concise and useful for reviewers.
+Review the changed source files from this pull request and update documentation only when it is useful.
+Allowed changes:
+- Create or update Markdown files under docs/.
+- Add missing documentation comments in the changed source files listed below. For TypeScript/JavaScript use JSDoc. For Java use JavaDoc.
+- If a changed exported function, class, type, or public Java member lacks a documentation comment, add one.
+
+Do not modify executable code, tests, package files, Jenkinsfiles, README files, or files outside docs/ and the listed source files.
+Do not include timestamps. Keep documentation concise and useful for reviewers.
 EOF
 
                     {
@@ -351,21 +368,31 @@ EOF
                         exit 0
                     fi
 
-                    if git diff --name-only | grep -v '^docs/' | grep -q .; then
-                        echo "Copilot modified files outside docs/. Refusing to commit."
-                        git diff --name-only | grep -v '^docs/'
-                        exit 1
+                    git diff --name-only > reports/modified-files.txt
+                    if [ -s reports/modified-files.txt ]; then
+                        while IFS= read -r file; do
+                            case "$file" in
+                                docs/*)
+                                    ;;
+                                *)
+                                    if ! grep -Fxq "$file" reports/comment-candidates.txt; then
+                                        echo "Copilot modified a file outside docs/ and outside the eligible source comment list. Refusing to commit: $file"
+                                        exit 1
+                                    fi
+                                    ;;
+                            esac
+                        done < reports/modified-files.txt
                     fi
 
-                    if git diff --quiet -- docs; then
+                    if [ ! -s reports/modified-files.txt ]; then
                         echo "No documentation changes generated."
                         echo "## Write-back" >> reports/docs-generator.md
                         echo "" >> reports/docs-generator.md
-                        echo "No documentation changes were generated." >> reports/docs-generator.md
+                        echo "No documentation or source-comment changes were generated." >> reports/docs-generator.md
                         exit 0
                     fi
 
-                    git diff -- docs > reports/generated-docs.patch
+                    git diff > reports/generated-docs.patch
 
                     git config user.name "jenkins-copilot"
                     git config user.email "jenkins-copilot@users.noreply.github.com"
@@ -376,12 +403,16 @@ EOF
                     git apply reports/generated-docs.patch
 
                     git add docs
+                    while IFS= read -r file; do
+                        [ -f "$file" ] && git add "$file"
+                    done < reports/comment-candidates.txt
+
                     git commit -m "docs: update Copilot-generated documentation [skip docs-generator]"
                     git push origin "HEAD:$HEAD_BRANCH"
 
                     echo "## Write-back" >> reports/docs-generator.md
                     echo "" >> reports/docs-generator.md
-                    echo "Committed generated documentation back to PR #${PR_NUMBER}." >> reports/docs-generator.md
+                    echo "Committed generated documentation/comment updates back to PR #${PR_NUMBER}." >> reports/docs-generator.md
                 '''
             }
         }
