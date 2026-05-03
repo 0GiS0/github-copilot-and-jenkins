@@ -131,7 +131,6 @@ Pipelines de demo incluidos:
 - `pipelines/code-review.jenkinsfile`
 - `pipelines/docs-generator.jenkinsfile`
 - `pipelines/code-analysis.jenkinsfile`
-- `Jenkinsfile` (orquestación principal por parámetro `DEMO_TYPE`)
 
 ## 📁 Estructura del Proyecto
 
@@ -159,7 +158,6 @@ Pipelines de demo incluidos:
 │   ├── index.ts
 │   ├── utils.ts
 │   └── utils.test.ts
-├── Jenkinsfile
 ├── package.json
 └── tsconfig.json
 ```
@@ -276,7 +274,6 @@ Pipeline demo incluse:
 - `pipelines/code-review.jenkinsfile`
 - `pipelines/docs-generator.jenkinsfile`
 - `pipelines/code-analysis.jenkinsfile`
-- `Jenkinsfile` (orchestrazione principale con `DEMO_TYPE`)
 
 <a id="struttura-it"></a>
 ### 📁 Struttura del Progetto (IT)
@@ -289,7 +286,6 @@ Pipeline demo incluse:
 ├── pipelines/
 ├── scripts/
 ├── src/
-├── Jenkinsfile
 ├── package.json
 └── tsconfig.json
 ```
@@ -406,7 +402,6 @@ Pipelines de démonstration inclus :
 - `pipelines/code-review.jenkinsfile`
 - `pipelines/docs-generator.jenkinsfile`
 - `pipelines/code-analysis.jenkinsfile`
-- `Jenkinsfile` (orchestrateur principal avec `DEMO_TYPE`)
 
 <a id="structure-fr"></a>
 ### 📁 Structure du Projet (FR)
@@ -435,7 +430,6 @@ Pipelines de démonstration inclus :
 │   ├── index.ts
 │   ├── utils.ts
 │   └── utils.test.ts
-├── Jenkinsfile
 ├── package.json
 └── tsconfig.json
 ```

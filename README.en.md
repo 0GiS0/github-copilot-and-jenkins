@@ -131,7 +131,6 @@ Included demo pipelines:
 - `pipelines/code-review.jenkinsfile`
 - `pipelines/docs-generator.jenkinsfile`
 - `pipelines/code-analysis.jenkinsfile`
-- `Jenkinsfile` (main orchestrator via `DEMO_TYPE` parameter)
 
 ## 📁 Project Structure
 
@@ -159,7 +158,6 @@ Included demo pipelines:
 │   ├── index.ts
 │   ├── utils.ts
 │   └── utils.test.ts
-├── Jenkinsfile
 ├── package.json
 └── tsconfig.json
 ```

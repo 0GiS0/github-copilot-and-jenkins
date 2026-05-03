@@ -69,24 +69,6 @@ pipelineJob('copilot-demos/code-analysis') {
     }
 }
 
-pipelineJob('main-pipeline') {
-    displayName('Main Pipeline - All Demos')
-    description('Run all Copilot CLI demonstrations')
-    definition {
-        cpsScm {
-            scm {
-                git {
-                    remote {
-                        url('${repositoryUrl}')
-                        credentials('${gitCredentialsId}')
-                    }
-                    branches('*/main')
-                }
-            }
-            scriptPath('Jenkinsfile')
-        }
-    }
-}
 """
 
 def jenkins = Jenkins.instance
