@@ -35,17 +35,17 @@ pipeline {
     stages {
         stage('🔧 Setup') {
             steps {
-            echo '📦 Checking GitHub Copilot CLI installation...'
+                echo '📦 Checking GitHub Copilot CLI installation...'
                 sh '''
+                    mkdir -p docs reports
+
                     if ! command -v copilot >/dev/null 2>&1; then
                         echo "Installing GitHub Copilot CLI..."
                         curl -fsSL https://gh.io/copilot-install | PREFIX="$HOME/.local" bash
                     fi
 
                     copilot --version
-                    gh auth status >/dev/null
-                    gh auth setup-git
-                    echo "✅ GitHub Copilot CLI and GitHub CLI are ready"
+                    echo "✅ GitHub Copilot CLI is ready"
                 '''
             }
         }
@@ -103,40 +103,69 @@ EOF
                         exit 0
                     fi
 
-                    gh pr view "$EFFECTIVE_PR" --json number,url,headRefName,baseRefName,isCrossRepository,author,headRepositoryOwner > reports/pr.json
-                    gh repo view --json owner,name > reports/repo.json
+                                        node - <<'NODE' > reports/repo.env
+const remote = require('child_process').execSync('git config --get remote.origin.url', { encoding: 'utf8' }).trim();
+let cleaned = remote;
+if (cleaned.startsWith('git@github.com:')) {
+    cleaned = cleaned.slice('git@github.com:'.length);
+}
+if (cleaned.startsWith('https://github.com/')) {
+    cleaned = cleaned.slice('https://github.com/'.length);
+}
+if (cleaned.endsWith('.git')) {
+    cleaned = cleaned.slice(0, -4);
+}
+const parts = cleaned.split('/');
+if (parts.length < 2) {
+    throw new Error(`Cannot determine GitHub repository from remote URL: ${remote}`);
+}
+console.log(`REPO_OWNER=${parts[0]}`);
+console.log(`REPO_NAME=${parts[1]}`);
+NODE
+                                        . reports/repo.env
+
+                                        curl -fsSL \
+                                                -H "Authorization: Bearer ${GH_TOKEN}" \
+                                                -H "Accept: application/vnd.github+json" \
+                                                "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${EFFECTIVE_PR}" > reports/pr.json
 
                     node - <<'NODE' > reports/permission-request.env
 const fs = require('fs');
 const pr = JSON.parse(fs.readFileSync('reports/pr.json', 'utf8'));
-const repo = JSON.parse(fs.readFileSync('reports/repo.json', 'utf8'));
-console.log(`REPO_OWNER=${repo.owner.login}`);
-console.log(`REPO_NAME=${repo.name}`);
-console.log(`AUTHOR_LOGIN=${pr.author.login}`);
+console.log(`AUTHOR_LOGIN=${pr.user.login}`);
 NODE
                     . reports/permission-request.env
 
-                    gh api "repos/${REPO_OWNER}/${REPO_NAME}/collaborators/${AUTHOR_LOGIN}/permission" > reports/author-permission.json || cat > reports/author-permission.json <<'EOF'
+                                        curl -fsSL \
+                                                -H "Authorization: Bearer ${GH_TOKEN}" \
+                                                -H "Accept: application/vnd.github+json" \
+                                                "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/collaborators/${AUTHOR_LOGIN}/permission" > reports/author-permission.json || cat > reports/author-permission.json <<'EOF'
 {"permission":"none","role_name":"none"}
 EOF
 
                     node - <<'NODE' > reports/pr-context.env
 const fs = require('fs');
 const pr = JSON.parse(fs.readFileSync('reports/pr.json', 'utf8'));
-const repo = JSON.parse(fs.readFileSync('reports/repo.json', 'utf8'));
+const repoEnv = fs.readFileSync('reports/repo.env', 'utf8').trim().split('\n').reduce((acc, line) => {
+    const index = line.indexOf('=');
+    acc[line.slice(0, index)] = line.slice(index + 1);
+    return acc;
+}, {});
 const permission = JSON.parse(fs.readFileSync('reports/author-permission.json', 'utf8'));
 const authorPermission = permission.permission || permission.role_name || 'none';
 const allowedPermissions = new Set(['admin', 'maintain', 'write']);
-const sameRepo = !pr.isCrossRepository && pr.headRepositoryOwner.login === repo.owner.login;
+const sameRepo = pr.head.repo.full_name === `${repoEnv.REPO_OWNER}/${repoEnv.REPO_NAME}`;
 const canWrite = sameRepo && allowedPermissions.has(authorPermission);
 console.log('SKIP_DOCS_GENERATOR=false');
+console.log(`REPO_OWNER=${repoEnv.REPO_OWNER}`);
+console.log(`REPO_NAME=${repoEnv.REPO_NAME}`);
 console.log(`PR_NUMBER=${pr.number}`);
-console.log(`PR_URL=${pr.url}`);
-console.log(`HEAD_BRANCH=${pr.headRefName}`);
-console.log(`BASE_BRANCH=${pr.baseRefName}`);
-console.log(`AUTHOR_LOGIN=${pr.author.login}`);
+console.log(`PR_URL=${pr.html_url}`);
+console.log(`HEAD_BRANCH=${pr.head.ref}`);
+console.log(`BASE_BRANCH=${pr.base.ref}`);
+console.log(`AUTHOR_LOGIN=${pr.user.login}`);
 console.log(`AUTHOR_PERMISSION=${authorPermission}`);
-console.log(`IS_CROSS_REPOSITORY=${pr.isCrossRepository}`);
+console.log(`IS_CROSS_REPOSITORY=${!sameRepo}`);
 console.log(`CAN_WRITE=${canWrite}`);
 NODE
 
@@ -164,7 +193,17 @@ NODE
                     git fetch origin "$HEAD_BRANCH"
                     git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
 
-                    gh pr diff "$PR_NUMBER" --name-only > reports/pr-changed-files.txt
+                                        curl -fsSL \
+                                                -H "Authorization: Bearer ${GH_TOKEN}" \
+                                                -H "Accept: application/vnd.github+json" \
+                                                "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls/${PR_NUMBER}/files?per_page=100" > reports/pr-files.json
+                                        node - <<'NODE' > reports/pr-changed-files.txt
+const fs = require('fs');
+const files = JSON.parse(fs.readFileSync('reports/pr-files.json', 'utf8'));
+for (const file of files) {
+    console.log(file.filename);
+}
+NODE
 
                     grep -E '^(src|jenkins-copilot-chat-plugin/src|pipelines|scripts)/.*[.](ts|js|java|groovy|jenkinsfile)$|^(README|README[.]en|docs)/.*[.]md$' \
                         reports/pr-changed-files.txt > reports/doc-candidates.raw || true
@@ -329,6 +368,7 @@ EOF
 
                     git config user.name "jenkins-copilot"
                     git config user.email "jenkins-copilot@users.noreply.github.com"
+                    git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git"
 
                     git fetch origin "$HEAD_BRANCH"
                     git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
