@@ -190,13 +190,21 @@ export function changedFiles() {
         .filter(file => !file.startsWith('reports/'));
 }
 
+export function selectedDocType() {
+    return process.env.DOC_TYPE || 'README';
+}
+
 export function validateAllowedChanges(state) {
     const allowedSourceFiles = new Set(state.files?.commentCandidates || []);
+    const allowMarkdownDocs = ['README', 'ALL'].includes(selectedDocType());
     const files = changedFiles();
     writeFileSync(`${reportsDir}/modified-files.txt`, files.length ? `${files.join('\n')}\n` : '');
     for (const file of files) {
         if (file.startsWith('docs/')) {
-            continue;
+            if (allowMarkdownDocs) {
+                continue;
+            }
+            throw new Error(`Copilot created Markdown documentation while DOC_TYPE=${selectedDocType()}: ${file}`);
         }
         if (!allowedSourceFiles.has(file)) {
             throw new Error(`Copilot modified a file outside docs/ and outside the eligible source comment list: ${file}`);

@@ -17,8 +17,8 @@ pipeline {
     parameters {
         choice(
             name: 'DOC_TYPE',
-            choices: ['README', 'API', 'ALL'],
-            description: 'Type of documentation to generate'
+            choices: ['README', 'SOURCE_COMMENTS', 'ALL'],
+            description: 'Type of documentation update to generate'
         )
         string(
             name: 'PR_NUMBER',
@@ -57,13 +57,13 @@ pipeline {
             }
         }
 
-        stage('Generate API Docs') {
+        stage('Generate Source Comments') {
             when {
-                expression { params.DOC_TYPE == 'API' || params.DOC_TYPE == 'ALL' }
+                expression { params.DOC_TYPE == 'SOURCE_COMMENTS' || params.DOC_TYPE == 'ALL' }
             }
             steps {
-                echo 'Generating PR-aware API documentation with Copilot...'
-                sh 'node scripts/docs-generator/generate-api.mjs'
+                echo 'Generating PR-aware source documentation comments with Copilot...'
+                sh 'node scripts/docs-generator/generate-source-comments.mjs'
             }
         }
 

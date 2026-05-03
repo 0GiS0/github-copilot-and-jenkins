@@ -7,13 +7,13 @@ if (state.skip || !state.pr?.canWrite) {
 }
 
 const candidates = state.files?.commentCandidates || [];
-writeFileSync('reports/api-candidates.txt', candidates.length ? `${candidates.join('\n')}\n` : '');
+writeFileSync('reports/source-comment-candidates.txt', candidates.length ? `${candidates.join('\n')}\n` : '');
 if (!candidates.length) {
-    appendSection('API Documentation', ['Skipped because no changed source files require API documentation.']);
+    appendSection('Source Documentation Comments', ['Skipped because no changed source files require documentation comments.']);
     process.exit(0);
 }
 
-let prompt = readFileSync('scripts/docs-generator/prompts/api.md', 'utf8');
+let prompt = readFileSync('scripts/docs-generator/prompts/source-comments.md', 'utf8');
 prompt += '\n\nChanged source files:\n';
 prompt += `${candidates.join('\n')}\n`;
 prompt += '\nRelevant file excerpts:\n';
@@ -21,9 +21,9 @@ for (const file of candidates) {
     prompt += `\n--- ${file} ---\n${headLines(file, 220)}\n`;
 }
 
-writeFileSync('reports/api-prompt.md', prompt);
-const status = runCopilot(prompt, 'reports/api-copilot-output.txt');
-appendSection('API Documentation', [firstLines('reports/api-copilot-output.txt', 140)]);
+writeFileSync('reports/source-comments-prompt.md', prompt);
+const status = runCopilot(prompt, 'reports/source-comments-copilot-output.txt');
+appendSection('Source Documentation Comments', [firstLines('reports/source-comments-copilot-output.txt', 140)]);
 
 if (status !== 0) {
     process.exit(status);
