@@ -1,5 +1,5 @@
-import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { firstLines, headLines, run, runCopilot, runInherited } from '../common/copilot.mjs';
 
 export const reportsDir = 'reports';
 export const statePath = `${reportsDir}/docs-generator-state.json`;
@@ -8,21 +8,6 @@ export const reportPath = `${reportsDir}/docs-generator.md`;
 export function ensureWorkspace() {
     mkdirSync('docs', { recursive: true });
     mkdirSync(reportsDir, { recursive: true });
-}
-
-export function run(command, args = [], options = {}) {
-    return execFileSync(command, args, {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-        ...options
-    }).trim();
-}
-
-export function runInherited(command, args = [], options = {}) {
-    execFileSync(command, args, {
-        stdio: 'inherit',
-        ...options
-    });
 }
 
 export function initReport() {
@@ -144,40 +129,7 @@ export function configureAuthenticatedRemote(owner, repo) {
     runInherited('git', ['remote', 'set-url', 'origin', `https://x-access-token:${process.env.GH_TOKEN}@github.com/${owner}/${repo}.git`]);
 }
 
-export function headLines(file, maxLines) {
-    const content = readFileSync(file, 'utf8');
-    return content.split(/\r?\n/).slice(0, maxLines).join('\n');
-}
-
-export function firstLines(file, maxLines) {
-    if (!existsSync(file)) {
-        return '';
-    }
-    return readFileSync(file, 'utf8').split(/\r?\n/).slice(0, maxLines).join('\n');
-}
-
-export function runCopilot(prompt, outputPath) {
-    const result = spawnSync('copilot', [
-        '--autopilot',
-        '--yolo',
-        '--max-autopilot-continues',
-        '3',
-        '--prompt',
-        prompt
-    ], {
-        encoding: 'utf8',
-        env: process.env
-    });
-    const output = `${result.stdout || ''}${result.stderr || ''}${result.error ? `\n${result.error.stack || result.error.message}\n` : ''}`;
-    writeFileSync(outputPath, output);
-    if (result.error) {
-        return 127;
-    }
-    if (result.signal) {
-        return 1;
-    }
-    return result.status ?? 1;
-}
+export { firstLines, headLines, run, runCopilot, runInherited };
 
 export function changedFiles() {
     const tracked = run('git', ['diff', '--name-only'], { stdio: ['ignore', 'pipe', 'pipe'] })
