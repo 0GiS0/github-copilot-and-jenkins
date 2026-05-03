@@ -28,14 +28,20 @@ export function headLines(file, maxLines) {
 }
 
 export function runCopilot(prompt, outputPath) {
-    const result = spawnSync('copilot', [
+    const args = [
         '--autopilot',
         '--yolo',
         '--max-autopilot-continues',
         '3',
         '--prompt',
         prompt
-    ], {
+    ];
+
+    if (process.env.COPILOT_MODEL) {
+        args.unshift('--model', process.env.COPILOT_MODEL);
+    }
+
+    const result = spawnSync('copilot', args, {
         encoding: 'utf8',
         env: process.env,
         maxBuffer: 10 * 1024 * 1024

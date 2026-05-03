@@ -10,6 +10,7 @@ pipeline {
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        COPILOT_MODEL = 'claude-sonnet-4.6'
         PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
 
@@ -48,7 +49,7 @@ pipeline {
             echo 'Archiving review report...'
             script {
                 if (fileExists('reports/code-review.md')) {
-                    def report = load 'scripts/md-to-html-report.groovy'
+                    def report = load 'scripts/common/md-to-html-report.groovy'
                     report.convert('reports/code-review.md', 'reports/code-review.html', 'Code Review Report')
                 }
             }
