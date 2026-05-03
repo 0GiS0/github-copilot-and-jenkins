@@ -2,9 +2,14 @@ FROM jenkins/jenkins:lts
 
 USER root
 
-# Install useful tools
-RUN apt-get update && apt-get install -y jq \
+# Install useful tools and Node.js (needed for Copilot CLI)
+RUN apt-get update && apt-get install -y jq curl \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install GitHub Copilot CLI globally
+RUN npm install -g @github/copilot
 
 # Copy plugins list and install plugins
 COPY jenkins-config/plugins.txt /usr/share/jenkins/ref/plugins.txt

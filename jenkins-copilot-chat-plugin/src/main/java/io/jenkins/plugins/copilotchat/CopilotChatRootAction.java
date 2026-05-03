@@ -179,7 +179,36 @@ public class CopilotChatRootAction implements RootAction {
         }
     }
 
-    /**\n     * \ud83d\udcac Handles an incoming chat message and streams the AI response via Server-Sent Events.\n     *\n     * <p>Flow:\n     * <ol>\n     *   <li>Deserialize the {@link MessageRequest} JSON body from the HTTP request.</li>\n     *   <li>Validate that the prompt is not blank.</li>\n     *   <li>Open a {@link StreamingHttpResponse} that writes SSE events.</li>\n     *   <li>Pass four callbacks to {@link CopilotChatSessionService#sendStream}:\n     *       <ul>\n     *         <li>\ud83d\udcdd {@code delta} \u2014 partial text chunks as they arrive (streamed token-by-token)</li>\n     *         <li>\ud83e\udde0 {@code reasoning} \u2014 optional thinking steps from reasoning models</li>\n     *         <li>\u2705 {@code complete} \u2014 signals the end of the response</li>\n     *         <li>\u274c {@code error} \u2014 sends an error event if something goes wrong</li>\n     *       </ul>\n     *   </li>\n     * </ol>\n     */\n    public void doSendMessage(StaplerRequest2 request, StaplerResponse2 response)\n            throws IOException, ServletException {\n        Jenkins.get().checkPermission(Jenkins.READ);\n        MessageRequest message =\n                objectMapper.readValue(request.getInputStream(), MessageRequest.class);\n        if (message.prompt() == null || message.prompt().isBlank()) {\n            error(\"prompt is required\").generateResponse(request, response, null);\n            return;\n        }\n\n        // \ud83d\udcf6 Use a streaming response to push SSE events back to the browser\n        new StreamingHttpResponse(
+    /**
+     * 💬 Handles an incoming chat message and streams the AI response via Server-Sent Events.
+     *
+     * <p>Flow:
+     * <ol>
+     *   <li>Deserialize the {@link MessageRequest} JSON body from the HTTP request.</li>
+     *   <li>Validate that the prompt is not blank.</li>
+     *   <li>Open a {@link StreamingHttpResponse} that writes SSE events.</li>
+     *   <li>Pass four callbacks to {@link CopilotChatSessionService#sendStream}:
+     *       <ul>
+     *         <li>📝 {@code delta} — partial text chunks as they arrive (streamed token-by-token)</li>
+     *         <li>🧠 {@code reasoning} — optional thinking steps from reasoning models</li>
+     *         <li>✅ {@code complete} — signals the end of the response</li>
+     *         <li>❌ {@code error} — sends an error event if something goes wrong</li>
+     *       </ul>
+     *   </li>
+     * </ol>
+     */
+    public void doSendMessage(StaplerRequest2 request, StaplerResponse2 response)
+            throws IOException, ServletException {
+        Jenkins.get().checkPermission(Jenkins.READ);
+        MessageRequest message =
+                objectMapper.readValue(request.getInputStream(), MessageRequest.class);
+        if (message.prompt() == null || message.prompt().isBlank()) {
+            error("prompt is required").generateResponse(request, response, null);
+            return;
+        }
+
+        // 📶 Use a streaming response to push SSE events back to the browser
+        new StreamingHttpResponse(
                         writer -> {
                             try {
                                 chatService
@@ -299,7 +328,7 @@ public class CopilotChatRootAction implements RootAction {
     }
 
     /**
-     * \ud83d\udc64 Returns the currently logged-in Jenkins user.
+     * 👤 Returns the currently logged-in Jenkins user.
      * Throws an {@link IllegalStateException} if called outside a request context
      * (e.g. background threads), acting as a safety guard.
      */
@@ -311,12 +340,12 @@ public class CopilotChatRootAction implements RootAction {
         return user;
     }
 
-    /** \ud83d\udce6 Shortcut: wraps a value in a 200 OK JSON response. */
+    /** 📦 Shortcut: wraps a value in a 200 OK JSON response. */
     private HttpResponse json(Object value) {
         return new JsonHttpResponse(200, value);
     }
 
-    /** \u274c Shortcut: wraps an error message in a 400 Bad Request JSON response. */
+    /** ❌ Shortcut: wraps an error message in a 400 Bad Request JSON response. */
     private HttpResponse error(String message) {
         return new JsonHttpResponse(400, Map.of("error", message));
     }

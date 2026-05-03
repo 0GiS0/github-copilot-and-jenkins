@@ -42,7 +42,8 @@ import jenkins.model.Jenkins;
  * <p>A {@link UserChatSession} is lazily created the first time a user sends a message.
  * It bundles:
  * <ul>
- *   <li>A {@link com.github.copilot.sdk.CopilotClient} \u2014 a long-lived connection to the Copilot CLI.</li>\n *   <li>A {@link com.github.copilot.sdk.CopilotSession} \u2014 a stateful conversation with the AI
+ *   <li>A {@link com.github.copilot.sdk.CopilotClient} \u2014 a long-lived connection to the Copilot CLI.</li>
+ *   <li>A {@link com.github.copilot.sdk.CopilotSession} \u2014 a stateful conversation with the AI
  *       (keeps context across turns).</li>
  *   <li>The model name for which the session was created.</li>
  * </ul>
@@ -114,7 +115,9 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * \ud83d\udcac Sends a prompt and collects the full response as a single string (non-streaming).\n     *\n     * <p>Registers listeners for delta events (partial chunks), the final message, errors,
+     * \ud83d\udcac Sends a prompt and collects the full response as a single string (non-streaming).
+     *
+     * <p>Registers listeners for delta events (partial chunks), the final message, errors,
      * and the idle event that marks the end of the AI turn. Waits for completion asynchronously.
      */
     public CompletableFuture<String> send(
@@ -280,7 +283,9 @@ public class CopilotChatSessionService {
      *
      * <p>Knowing which page the user is on helps the AI answer job-specific questions
      * without the user having to mention the job name explicitly.
-     * Example result: {@code "[Jenkins page context: /job/my-pipeline/]\n\nWhy did the last build fail?"}
+     * Example result: {@code "[Jenkins page context: /job/my-pipeline/]
+
+Why did the last build fail?"}
      */
     private static String enrichPromptWithContext(String prompt, String pagePath) {
         if (pagePath == null || pagePath.isBlank()) {
@@ -378,9 +383,15 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * \ud83c\udfd7\ufe0f Builds the MCP server configuration map for a new session.\n     *\n     * <p>The Jenkins MCP server is always registered. The GitHub MCP server is only registered
+     * \ud83c\udfd7\ufe0f Builds the MCP server configuration map for a new session.
+     *
+     * <p>The Jenkins MCP server is always registered. The GitHub MCP server is only registered
      * when both its URL and token are present in the configuration.
-     */\n    private static Map<String, McpServerConfig> buildMcpServers(\n            CopilotChatConfiguration configuration) {\n        Map<String, McpServerConfig> servers = new LinkedHashMap<>();\n        McpHttpServerConfig jenkins =
+     */
+    private static Map<String, McpServerConfig> buildMcpServers(
+            CopilotChatConfiguration configuration) {
+        Map<String, McpServerConfig> servers = new LinkedHashMap<>();
+        McpHttpServerConfig jenkins =
                 new McpHttpServerConfig().setUrl(buildJenkinsMcpUrl(configuration));
         jenkins.setTools(List.of("*"));
         String auth = buildJenkinsAuthHeader(configuration);
