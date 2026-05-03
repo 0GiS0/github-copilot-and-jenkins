@@ -1,115 +1,59 @@
 pipeline {
     agent any
-    
+
     options {
         ansiColor('xterm')
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
     }
-    
+
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        COPILOT_MODEL = 'claude-sonnet-4.6'
         PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
-    
+
     stages {
         stage('🔧 Setup') {
             steps {
-                echo '📦 Checking GitHub Copilot CLI installation...'
-                sh '''
-                    if ! command -v copilot >/dev/null 2>&1; then
-                        echo "Installing GitHub Copilot CLI..."
-                        curl -fsSL https://gh.io/copilot-install | PREFIX="$HOME/.local" bash
-                    fi
-
-                    copilot --version
-                    echo "✅ GitHub Copilot CLI is ready"
-                '''
+                echo 'Checking GitHub Copilot CLI installation...'
+                sh 'sh scripts/common/setup-copilot.sh reports'
             }
         }
-        
-        stage('📂 Prepare Files') {
+
+        stage('📂 Files') {
             steps {
-                echo '🔍 Collecting source files for review...'
-                sh '''
-                    # List all TypeScript files to review
-                    find src -name "*.ts" -type f | head -20 > files_to_review.txt
-                    echo "Files to review:"
-                    cat files_to_review.txt
-                '''
+                echo 'Collecting source files for review...'
+                sh 'node scripts/code-review/prepare-files.mjs'
             }
         }
-        
-        stage('📝 Code Review with Copilot') {
+
+        stage('📝 Review') {
             steps {
-                echo '🤖 Running Copilot code review...'
-                sh '''
-                    mkdir -p reports
-                    
-                    # Review each file
-                    echo "# Code Review Report" > reports/code-review.md
-                    echo "" >> reports/code-review.md
-                    echo "Generated: $(date)" >> reports/code-review.md
-                    echo "" >> reports/code-review.md
-                    
-                    for file in $(cat files_to_review.txt); do
-                        echo "## Reviewing: $file" >> reports/code-review.md
-                        echo "" >> reports/code-review.md
-                        
-                        # Use Copilot CLI agent to review the code
-                        echo "Reviewing $file..."
-
-                        echo "### Code Explanation" >> reports/code-review.md
-                        echo '```' >> reports/code-review.md
-
-                        cat > reports/copilot-review-prompt.txt <<EOF
-Use the Code-review agent to review this TypeScript file for genuine bugs, maintainability risks, and practical improvements.
-Return concise Markdown. Do not modify files.
-
-File: $file
-
-$(head -100 "$file")
-EOF
-
-                        copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat reports/copilot-review-prompt.txt)" 2>&1 | head -120 >> reports/code-review.md
-                        echo '```' >> reports/code-review.md
-                        echo "" >> reports/code-review.md
-                        
-                        echo "---" >> reports/code-review.md
-                        echo "" >> reports/code-review.md
-                    done
-                    
-                    echo "✅ Code review complete!"
-                '''
+                echo 'Running Copilot code review...'
+                sh 'node scripts/code-review/review.mjs'
             }
         }
-        
-        stage('📊 Generate Summary') {
+
+        stage('📊 Summary') {
             steps {
-                echo '📋 Generating review summary...'
-                sh '''
-                    echo "" >> reports/code-review.md
-                    echo "## Summary" >> reports/code-review.md
-                    echo "" >> reports/code-review.md
-                    echo "- Files reviewed: $(wc -l < files_to_review.txt)" >> reports/code-review.md
-                    echo "- Review date: $(date)" >> reports/code-review.md
-                    echo "- Jenkins build: #${BUILD_NUMBER}" >> reports/code-review.md
-                '''
+                echo 'Generating review summary...'
+                sh 'node scripts/code-review/summary.mjs'
             }
         }
     }
-    
+
     post {
         always {
-            echo '📁 Archiving review report...'
+            echo 'Archiving review report...'
             script {
                 if (fileExists('reports/code-review.md')) {
-                    def report = load 'scripts/md-to-html-report.groovy'
+                    def report = load 'scripts/common/md-to-html-report.groovy'
                     report.convert('reports/code-review.md', 'reports/code-review.html', 'Code Review Report')
                 }
             }
-            archiveArtifacts artifacts: 'reports/*.md, reports/*.html, reports/*.css', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'reports/*.md, reports/*.txt, reports/*.html, reports/*.css', allowEmptyArchive: true
             publishHTML(target: [
                 reportDir: 'reports',
                 reportFiles: 'code-review.html',
@@ -120,10 +64,10 @@ EOF
             ])
         }
         success {
-            echo '✅ Code review pipeline completed successfully!'
+            echo 'Code review pipeline completed successfully!'
         }
         failure {
-            echo '❌ Code review pipeline failed!'
+            echo 'Code review pipeline failed!'
         }
     }
 }

@@ -3,7 +3,7 @@
  *
  * Usage from a Declarative Pipeline:
  *   script {
- *       def report = load 'scripts/md-to-html-report.groovy'
+ *       def report = load 'scripts/common/md-to-html-report.groovy'
  *       report.convert('analysis/report.md', 'analysis/report.html', 'Project Analysis Report')
  *   }
  */
@@ -184,7 +184,7 @@ static String renderMarkdown(String source) {
  */
 void convert(String mdPath, String htmlPath, String title) {
     String markdown = readFile(file: mdPath, encoding: 'UTF-8')
-    String cssSource = fileExists('reports/report-source.css') ? 'reports/report-source.css' : 'scripts/report.css'
+    String cssSource = fileExists('reports/report-source.css') ? 'reports/report-source.css' : 'scripts/common/report.css'
     String css = readFile(file: cssSource, encoding: 'UTF-8')
     String body = renderMarkdown(markdown)
     String safeTitle = escapeHtml(title)

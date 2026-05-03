@@ -1,206 +1,66 @@
 pipeline {
     agent any
-    
+
     options {
         ansiColor('xterm')
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
     }
-    
+
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        COPILOT_MODEL = 'claude-sonnet-4.6'
         PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
-    
+
     stages {
         stage('🔧 Setup') {
             steps {
-                echo '📦 Checking GitHub Copilot CLI installation...'
-                sh '''
-                    if ! command -v copilot >/dev/null 2>&1; then
-                        echo "Installing GitHub Copilot CLI..."
-                        curl -fsSL https://gh.io/copilot-install | PREFIX="$HOME/.local" bash
-                    fi
-
-                    copilot --version
-                    echo "✅ GitHub Copilot CLI is ready"
-                '''
+                echo 'Checking GitHub Copilot CLI installation...'
+                sh 'sh scripts/common/setup-copilot.sh analysis'
             }
         }
-        
-        stage('📊 Project Overview') {
+
+        stage('📊 Overview') {
             steps {
-                echo '🔍 Analyzing project structure...'
-                sh '''
-                    mkdir -p analysis
-                    
-                    echo "# Project Analysis Report" > analysis/report.md
-                    echo "" >> analysis/report.md
-                    echo "Generated: $(date)" >> analysis/report.md
-                    echo "Build: #${BUILD_NUMBER}" >> analysis/report.md
-                    echo "" >> analysis/report.md
-                    
-                    echo "## Project Statistics" >> analysis/report.md
-                    echo "" >> analysis/report.md
-                    echo "| Metric | Value |" >> analysis/report.md
-                    echo "|--------|-------|" >> analysis/report.md
-                    echo "| TypeScript files | $(find src -name '*.ts' | wc -l) |" >> analysis/report.md
-                    echo "| Test files | $(find src -name '*.test.ts' | wc -l) |" >> analysis/report.md
-                    echo "| Total lines | $(find src -name '*.ts' -exec cat {} + | wc -l) |" >> analysis/report.md
-                    echo "" >> analysis/report.md
-                '''
+                echo 'Analyzing project structure...'
+                sh 'node scripts/code-analysis/project-overview.mjs'
             }
         }
-        
-        stage('🔍 Code Complexity Analysis') {
+
+        stage('🧠 Complexity') {
             steps {
-                echo '🤖 Analyzing code complexity with Copilot...'
-                sh '''
-                    echo "## Complexity Analysis" >> analysis/report.md
-                    echo "" >> analysis/report.md
-                    
-                    for file in $(find src -name "*.ts" -type f | grep -v test | head -5); do
-                        echo "### $(basename $file)" >> analysis/report.md
-                        echo "" >> analysis/report.md
-                        
-                        # Count functions
-                        FUNC_COUNT=$(grep -c "function" "$file" 2>/dev/null || echo "0")
-                        echo "- Functions: $FUNC_COUNT" >> analysis/report.md
-                        
-                        # Lines of code
-                        LOC=$(wc -l < "$file")
-                        echo "- Lines: $LOC" >> analysis/report.md
-                        
-                        # Ask Copilot CLI agent for complexity suggestions
-                        echo "" >> analysis/report.md
-                        echo "**Copilot Analysis:**" >> analysis/report.md
-                        echo "" >> analysis/report.md
-
-                        cat > analysis/copilot-prompt.txt <<EOF
-Analyze this TypeScript file for complexity, maintainability, and focused improvement opportunities.
-Return a concise Markdown section. Do not modify files.
-
-File: $file
-
-$(head -80 "$file")
-EOF
-
-                        set +x
-                        copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-prompt.txt)" > analysis/copilot-output.txt 2>&1
-                        copilot_status=$?
-                        set -x
-                        head -80 analysis/copilot-output.txt >> analysis/report.md
-                        if [ "$copilot_status" -ne 0 ]; then
-                            exit "$copilot_status"
-                        fi
-                        echo "" >> analysis/report.md
-                    done
-                '''
+                echo 'Analyzing code complexity with Copilot...'
+                sh 'node scripts/code-analysis/complexity.mjs'
             }
         }
-        
-        stage('🛡️ Security Suggestions') {
+
+        stage('🛡️ Security') {
             steps {
-                echo '🔒 Getting security suggestions from Copilot...'
-                sh '''
-                    echo "## Security Analysis" >> analysis/report.md
-                    echo "" >> analysis/report.md
-                    
-                    # Check for common patterns
-                    echo "### Potential Security Patterns Found" >> analysis/report.md
-                    echo "" >> analysis/report.md
-                    
-                    # Look for potential issues
-                    if grep -r "eval(" src/ 2>/dev/null; then
-                        echo "⚠️ Found eval() usage - potential security risk" >> analysis/report.md
-                    fi
-                    
-                    if grep -r "innerHTML" src/ 2>/dev/null; then
-                        echo "⚠️ Found innerHTML usage - potential XSS risk" >> analysis/report.md
-                    fi
-                    
-                    echo "" >> analysis/report.md
-                    echo "**Copilot Security Recommendations:**" >> analysis/report.md
-                    echo "" >> analysis/report.md
-
-                    cat > analysis/copilot-security-prompt.txt <<'EOF'
-Review this Node.js TypeScript project for security risks.
-Focus on practical recommendations for code in src/, dependency usage, secrets handling, and CI safety.
-Return concise Markdown bullets. Do not modify files.
-EOF
-
-                    set +x
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-security-prompt.txt)" > analysis/copilot-output.txt 2>&1
-                    copilot_status=$?
-                    set -x
-                    head -80 analysis/copilot-output.txt >> analysis/report.md
-                    if [ "$copilot_status" -ne 0 ]; then
-                        exit "$copilot_status"
-                    fi
-                '''
+                echo 'Getting security suggestions from Copilot...'
+                sh 'node scripts/code-analysis/security.mjs'
             }
         }
-        
-        stage('💡 Improvement Suggestions') {
+
+        stage('💡 Improvements') {
             steps {
-                echo '✨ Getting improvement suggestions from Copilot...'
-                sh '''
-                    echo "## Improvement Suggestions" >> analysis/report.md
-                    echo "" >> analysis/report.md
-                    
-                    # Get general suggestions
-                    echo "### General Recommendations" >> analysis/report.md
-                    echo "" >> analysis/report.md
-
-                    cat > analysis/copilot-improvements-prompt.txt <<'EOF'
-Suggest improvements for this TypeScript utility project.
-Review the repository structure, source code, and scripts. Return concise Markdown bullets grouped by impact.
-Do not modify files.
-EOF
-
-                    set +x
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-improvements-prompt.txt)" > analysis/copilot-output.txt 2>&1
-                    copilot_status=$?
-                    set -x
-                    head -100 analysis/copilot-output.txt >> analysis/report.md
-                    if [ "$copilot_status" -ne 0 ]; then
-                        exit "$copilot_status"
-                    fi
-                    
-                    echo "" >> analysis/report.md
-                    echo "### Testing Recommendations" >> analysis/report.md
-                    echo "" >> analysis/report.md
-
-                    cat > analysis/copilot-testing-prompt.txt <<'EOF'
-Review testing practices for this TypeScript Jest project.
-Focus on missing edge cases, useful test organization, and CI-friendly recommendations.
-Return concise Markdown. Do not modify files.
-EOF
-
-                    set +x
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat analysis/copilot-testing-prompt.txt)" > analysis/copilot-output.txt 2>&1
-                    copilot_status=$?
-                    set -x
-                    head -80 analysis/copilot-output.txt >> analysis/report.md
-                    if [ "$copilot_status" -ne 0 ]; then
-                        exit "$copilot_status"
-                    fi
-                '''
+                echo 'Getting improvement suggestions from Copilot...'
+                sh 'node scripts/code-analysis/improvements.mjs'
             }
         }
     }
-    
+
     post {
         always {
-            echo '📁 Archiving analysis report...'
+            echo 'Archiving analysis report...'
             script {
                 if (fileExists('analysis/report.md')) {
-                    def report = load 'scripts/md-to-html-report.groovy'
+                    def report = load 'scripts/common/md-to-html-report.groovy'
                     report.convert('analysis/report.md', 'analysis/report.html', 'Project Analysis Report')
                 }
             }
-            archiveArtifacts artifacts: 'analysis/*.md, analysis/*.html, analysis/*.css', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'analysis/*.md, analysis/*.txt, analysis/*.html, analysis/*.css', allowEmptyArchive: true
             publishHTML(target: [
                 reportDir: 'analysis',
                 reportFiles: 'report.html',
@@ -211,10 +71,10 @@ EOF
             ])
         }
         success {
-            echo '✅ Code analysis completed successfully!'
+            echo 'Code analysis completed successfully!'
         }
         failure {
-            echo '❌ Code analysis failed!'
+            echo 'Code analysis failed!'
         }
     }
 }

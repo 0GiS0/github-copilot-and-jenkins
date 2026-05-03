@@ -11,6 +11,7 @@ pipeline {
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        COPILOT_MODEL = 'claude-sonnet-4.6'
         PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
 
@@ -33,21 +34,21 @@ pipeline {
     }
 
     stages {
-        stage('Setup') {
+        stage('🔧 Setup') {
             steps {
                 echo 'Checking GitHub Copilot CLI installation...'
-                sh 'sh scripts/docs-generator/setup.sh'
+                sh 'sh scripts/common/setup-copilot.sh reports'
             }
         }
 
-        stage('Prepare PR Context') {
+        stage('🔎 PR Context') {
             steps {
                 echo 'Detecting PR context, author permission, and documentation candidates...'
                 sh 'node scripts/docs-generator/prepare.mjs'
             }
         }
 
-        stage('Generate README Updates') {
+        stage('📚 README') {
             when {
                 expression { params.DOC_TYPE == 'README' || params.DOC_TYPE == 'ALL' }
             }
@@ -57,7 +58,7 @@ pipeline {
             }
         }
 
-        stage('Generate Source Comments') {
+        stage('💬 Source Comments') {
             when {
                 expression { params.DOC_TYPE == 'SOURCE_COMMENTS' || params.DOC_TYPE == 'ALL' }
             }
@@ -67,14 +68,14 @@ pipeline {
             }
         }
 
-        stage('Validate Generated Changes') {
+        stage('✅ Validate') {
             steps {
                 echo 'Validating generated documentation changes...'
                 sh 'node scripts/docs-generator/validate-changes.mjs'
             }
         }
 
-        stage('Commit Documentation to PR') {
+        stage('⬆️ Write Back') {
             when {
                 expression { params.WRITE_BACK_TO_PR }
             }
@@ -84,7 +85,7 @@ pipeline {
             }
         }
 
-        stage('Comment on PR') {
+        stage('📣 PR Comment') {
             steps {
                 echo 'Posting documentation generator summary to the PR...'
                 sh 'node scripts/docs-generator/comment-pr.mjs'
@@ -97,7 +98,7 @@ pipeline {
             echo 'Archiving documentation and report...'
             script {
                 if (fileExists('reports/docs-generator.md')) {
-                    def report = load 'reports/md-to-html-report.groovy'
+                    def report = load 'scripts/common/md-to-html-report.groovy'
                     report.convert('reports/docs-generator.md', 'reports/docs-generator.html', 'Documentation Generator Report')
                 }
             }
