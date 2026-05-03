@@ -39,35 +39,42 @@ import jenkins.model.Jenkins;
  * \ud83e\udd16 Manages per-user Copilot chat sessions and handles AI message streaming.
  *
  * <h2>Session lifecycle</h2>
- * <p>A {@link UserChatSession} is lazily created the first time a user sends a message.
- * It bundles:
+ *
+ * <p>A {@link UserChatSession} is lazily created the first time a user sends a message. It bundles:
+ *
  * <ul>
- *   <li>A {@link com.github.copilot.sdk.CopilotClient} \u2014 a long-lived connection to the Copilot CLI.</li>
+ *   <li>A {@link com.github.copilot.sdk.CopilotClient} \u2014 a long-lived connection to the
+ *       Copilot CLI.
  *   <li>A {@link com.github.copilot.sdk.CopilotSession} \u2014 a stateful conversation with the AI
- *       (keeps context across turns).</li>
- *   <li>The model name for which the session was created.</li>
+ *       (keeps context across turns).
+ *   <li>The model name for which the session was created.
  * </ul>
  *
  * <p>Sessions are cached in {@link #sessions} (keyed by Jenkins user ID) and reused across
  * requests. If the user switches AI model, the old session is torn down and a new one is started.
  *
  * <h2>MCP integration</h2>
+ *
  * <p>When the session is created, it registers one or two MCP (Model Context Protocol) servers:
+ *
  * <ul>
- *   <li>\ud83c\udfd7\ufe0f <b>Jenkins MCP</b> \u2014 always registered; exposes Jenkins operations as AI-callable tools.</li>
- *   <li>\ud83d\udc19 <b>GitHub MCP</b> \u2014 registered only when both URL and token are configured; exposes
- *       GitHub repository operations (create PR, edit files, etc.).</li>
+ *   <li>\ud83c\udfd7\ufe0f <b>Jenkins MCP</b> \u2014 always registered; exposes Jenkins operations
+ *       as AI-callable tools.
+ *   <li>\ud83d\udc19 <b>GitHub MCP</b> \u2014 registered only when both URL and token are
+ *       configured; exposes GitHub repository operations (create PR, edit files, etc.).
  * </ul>
  *
  * <h2>Streaming</h2>
- * <p>The AI response arrives as a stream of SDK events. {@link #sendStream} registers four
- * event listeners before sending the prompt:
+ *
+ * <p>The AI response arrives as a stream of SDK events. {@link #sendStream} registers four event
+ * listeners before sending the prompt:
+ *
  * <ol>
- *   <li>{@code AssistantReasoningEvent} \u2014 thinking steps (reasoning models only)</li>
- *   <li>{@code AssistantMessageDeltaEvent} \u2014 partial text chunks (token-by-token)</li>
- *   <li>{@code AssistantMessageEvent} \u2014 full message (fallback if no deltas were emitted)</li>
- *   <li>{@code SessionIdleEvent} \u2014 signals that the AI has finished responding</li>
- *   <li>{@code SessionErrorEvent} \u2014 signals an error during the turn</li>
+ *   <li>{@code AssistantReasoningEvent} \u2014 thinking steps (reasoning models only)
+ *   <li>{@code AssistantMessageDeltaEvent} \u2014 partial text chunks (token-by-token)
+ *   <li>{@code AssistantMessageEvent} \u2014 full message (fallback if no deltas were emitted)
+ *   <li>{@code SessionIdleEvent} \u2014 signals that the AI has finished responding
+ *   <li>{@code SessionErrorEvent} \u2014 signals an error during the turn
  * </ol>
  */
 public class CopilotChatSessionService {
@@ -88,17 +95,19 @@ public class CopilotChatSessionService {
     /**
      * \ud83e\udd16 Lists AI models available to the user.
      *
-     * <p>Reuses the client from an existing session when one is available.
-     * Otherwise creates a temporary client, fetches the model list, and stops the client.
+     * <p>Reuses the client from an existing session when one is available. Otherwise creates a
+     * temporary client, fetches the model list, and stops the client.
      */
     public CompletableFuture<List<ModelInfo>> listModels(
             User user, CopilotChatConfiguration configuration) {
         UserChatSession existing = sessions.get(user.getId());
         if (existing != null) {
-            // \u267b\ufe0f Reuse the SDK client that's already running \u2014 avoids starting an extra process
+            // \u267b\ufe0f Reuse the SDK client that's already running \u2014 avoids starting an
+            // extra process
             return existing.client().listModels();
         }
-        // \ud83d'ude80 No existing session — create a temporary client just for listing models, then stop it
+        // \ud83d'ude80 No existing session — create a temporary client just for listing models,
+        // then stop it
         return CompletableFuture.supplyAsync(
                 () -> {
                     try {
@@ -115,10 +124,11 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * \ud83d\udcac Sends a prompt and collects the full response as a single string (non-streaming).
+     * \ud83d\udcac Sends a prompt and collects the full response as a single string
+     * (non-streaming).
      *
-     * <p>Registers listeners for delta events (partial chunks), the final message, errors,
-     * and the idle event that marks the end of the AI turn. Waits for completion asynchronously.
+     * <p>Registers listeners for delta events (partial chunks), the final message, errors, and the
+     * idle event that marks the end of the AI turn. Waits for completion asynchronously.
      */
     public CompletableFuture<String> send(
             User user,
@@ -177,15 +187,16 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * \ud83d\udcf6 Sends a prompt and streams the AI response token-by-token via callback consumers.
+     * \ud83d\udcf6 Sends a prompt and streams the AI response token-by-token via callback
+     * consumers.
      *
-     * <p>This is the primary method called by {@link CopilotChatRootAction#doSendMessage}.
-     * It uses four callbacks so the caller can react to different event types independently:
+     * <p>This is the primary method called by {@link CopilotChatRootAction#doSendMessage}. It uses
+     * four callbacks so the caller can react to different event types independently:
      *
-     * @param deltaConsumer     called for each incremental text chunk (partial response)
+     * @param deltaConsumer called for each incremental text chunk (partial response)
      * @param reasoningConsumer called with reasoning/thinking steps (reasoning models only)
-     * @param completeConsumer  called once with the full message when the turn ends
-     * @param errorConsumer     called if the session reports an error
+     * @param completeConsumer called once with the full message when the turn ends
+     * @param errorConsumer called if the session reports an error
      */
     public CompletableFuture<Void> sendStream(
             User user,
@@ -204,7 +215,8 @@ public class CopilotChatSessionService {
                         session -> {
                             CompletableFuture<Void> done = new CompletableFuture<>();
                             List<Closeable> listeners = new java.util.ArrayList<>();
-                            // \ud83e\udde0 Reasoning events: thinking steps from reasoning models (e.g. o1, o3)
+                            // \ud83e\udde0 Reasoning events: thinking steps from reasoning models
+                            // (e.g. o1, o3)
                             listeners.add(
                                     session.session()
                                             .on(
@@ -264,9 +276,9 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * 🧹 Closes a list of {@link Closeable} event listener handles quietly.
-     * Called after a chat turn completes (or fails) to deregister all listeners and
-     * avoid memory leaks from leftover event subscriptions on the session.
+     * 🧹 Closes a list of {@link Closeable} event listener handles quietly. Called after a chat
+     * turn completes (or fails) to deregister all listeners and avoid memory leaks from leftover
+     * event subscriptions on the session.
      */
     private static void closeQuietly(List<Closeable> closeables) {
         for (Closeable c : closeables) {
@@ -281,9 +293,9 @@ public class CopilotChatSessionService {
     /**
      * 🗺️ Prepends the current Jenkins page path to the user's prompt as extra context.
      *
-     * <p>Knowing which page the user is on helps the AI answer job-specific questions
-     * without the user having to mention the job name explicitly.
-     * Example result: {@code "[Jenkins page context: /job/my-pipeline/]\n\nWhy did the last build fail?"}
+     * <p>Knowing which page the user is on helps the AI answer job-specific questions without the
+     * user having to mention the job name explicitly. Example result: {@code "[Jenkins page
+     * context: /job/my-pipeline/]\n\nWhy did the last build fail?"}
      */
     private static String enrichPromptWithContext(String prompt, String pagePath) {
         if (pagePath == null || pagePath.isBlank()) {
@@ -298,16 +310,18 @@ public class CopilotChatSessionService {
      * <p>If a session already exists for the requested model it is reused — this preserves
      * conversation history across multiple turns in the same chat session.
      *
-     * <p>If the user has changed the AI model, the old session is torn down first so that
-     * the new session uses the correct model from the start.
+     * <p>If the user has changed the AI model, the old session is torn down first so that the new
+     * session uses the correct model from the start.
      *
      * <p>Session creation steps:
+     *
      * <ol>
-     *   <li>Create and start a {@link CopilotClient}.</li>
-     *   <li>Build the {@link SessionConfig} with model, system message, MCP servers, and tools.</li>
-     *   <li>Call {@link com.github.copilot.sdk.CopilotClient#createSession} to start the AI session.</li>
-     *   <li>Wait up to 30 seconds for MCP servers to initialize (if any were configured).</li>
-     *   <li>Store the session in {@link #sessions} using a compare-and-set to handle races.</li>
+     *   <li>Create and start a {@link CopilotClient}.
+     *   <li>Build the {@link SessionConfig} with model, system message, MCP servers, and tools.
+     *   <li>Call {@link com.github.copilot.sdk.CopilotClient#createSession} to start the AI
+     *       session.
+     *   <li>Wait up to 30 seconds for MCP servers to initialize (if any were configured).
+     *   <li>Store the session in {@link #sessions} using a compare-and-set to handle races.
      * </ol>
      */
     private CompletableFuture<UserChatSession> getOrCreateSession(
@@ -370,7 +384,8 @@ public class CopilotChatSessionService {
                         }
                         UserChatSession created =
                                 new UserChatSession(client, session, effectiveModel);
-                        // \ud83d\udd12 Use putIfAbsent to handle the rare race where two threads create a session
+                        // \ud83d\udd12 Use putIfAbsent to handle the rare race where two threads
+                        // create a session
                         // concurrently \u2014 only the first one wins; the other is discarded.
                         UserChatSession previous = sessions.putIfAbsent(user.getId(), created);
                         return previous == null ? created : previous;
@@ -383,8 +398,8 @@ public class CopilotChatSessionService {
     /**
      * \ud83c\udfd7\ufe0f Builds the MCP server configuration map for a new session.
      *
-     * <p>The Jenkins MCP server is always registered. The GitHub MCP server is only registered
-     * when both its URL and token are present in the configuration.
+     * <p>The Jenkins MCP server is always registered. The GitHub MCP server is only registered when
+     * both its URL and token are present in the configuration.
      */
     private static Map<String, McpServerConfig> buildMcpServers(
             CopilotChatConfiguration configuration) {
@@ -419,9 +434,9 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * 🏗️ Returns the Jenkins MCP server URL.
-     * Falls back to {@code http://jenkins:8080/mcp-server/stateless} (the default Docker Compose
-     * address) when no URL is explicitly configured.
+     * 🏗️ Returns the Jenkins MCP server URL. Falls back to {@code
+     * http://jenkins:8080/mcp-server/stateless} (the default Docker Compose address) when no URL is
+     * explicitly configured.
      */
     private static String buildJenkinsMcpUrl(CopilotChatConfiguration configuration) {
         String configured = configuration.getJenkinsMcpUrl();
@@ -450,12 +465,13 @@ public class CopilotChatSessionService {
     /**
      * 🤖 Builds the system message that defines the AI's persona and capabilities.
      *
-     * <p>The system message is injected at session creation time and stays in the AI's context
-     * for all turns in the conversation. It tells the AI:
+     * <p>The system message is injected at session creation time and stays in the AI's context for
+     * all turns in the conversation. It tells the AI:
+     *
      * <ul>
-     *   <li>Who it is (GitHub Copilot embedded in Jenkins)</li>
-     *   <li>Which MCP tools are available and what they do</li>
-     *   <li>How to interpret the page context prefix added by {@link #enrichPromptWithContext}</li>
+     *   <li>Who it is (GitHub Copilot embedded in Jenkins)
+     *   <li>Which MCP tools are available and what they do
+     *   <li>How to interpret the page context prefix added by {@link #enrichPromptWithContext}
      * </ul>
      */
     private static String buildSystemMessage() {
@@ -478,8 +494,8 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * 🔧 Parses a comma-separated tool list from the configuration string.
-     * Returns an empty list (meaning "allow all") when the configuration is blank.
+     * 🔧 Parses a comma-separated tool list from the configuration string. Returns an empty list
+     * (meaning "allow all") when the configuration is blank.
      */
     private static List<String> parseTools(String value) {
         if (value == null || value.isBlank()) {
@@ -492,9 +508,9 @@ public class CopilotChatSessionService {
     }
 
     /**
-     * 🗑️ Invalidates and stops the session for a user.
-     * Forces a brand-new session to be created on the user's next message.
-     * Called automatically when the model changes, and can also be invoked externally.
+     * 🗑️ Invalidates and stops the session for a user. Forces a brand-new session to be created on
+     * the user's next message. Called automatically when the model changes, and can also be invoked
+     * externally.
      */
     public void invalidateSession(User user) {
         UserChatSession removed = sessions.remove(user.getId());
@@ -511,9 +527,10 @@ public class CopilotChatSessionService {
      * 🗄️ Immutable value object that groups the three components of an active chat session.
      *
      * <ul>
-     *   <li>{@code client} — the SDK client connected to the Copilot CLI process/server</li>
-     *   <li>{@code session} — the stateful AI conversation (preserves history across turns)</li>
-     *   <li>{@code model} — the model name used when creating this session (used for change detection)</li>
+     *   <li>{@code client} — the SDK client connected to the Copilot CLI process/server
+     *   <li>{@code session} — the stateful AI conversation (preserves history across turns)
+     *   <li>{@code model} — the model name used when creating this session (used for change
+     *       detection)
      * </ul>
      */
     private record UserChatSession(CopilotClient client, CopilotSession session, String model) {}
