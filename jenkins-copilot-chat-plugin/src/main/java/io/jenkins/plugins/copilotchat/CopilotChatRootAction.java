@@ -180,7 +180,7 @@ public class CopilotChatRootAction implements RootAction {
     }
 
     /**
-     * \ud83d\udcac Handles an incoming chat message and streams the AI response via Server-Sent Events.
+     * 💬 Handles an incoming chat message and streams the AI response via Server-Sent Events.
      *
      * <p>Flow:
      * <ol>
@@ -189,10 +189,10 @@ public class CopilotChatRootAction implements RootAction {
      *   <li>Open a {@link StreamingHttpResponse} that writes SSE events.</li>
      *   <li>Pass four callbacks to {@link CopilotChatSessionService#sendStream}:
      *       <ul>
-     *         <li>\ud83d\udcdd {@code delta} \u2014 partial text chunks as they arrive (streamed token-by-token)</li>
-     *         <li>\ud83e\udde0 {@code reasoning} \u2014 optional thinking steps from reasoning models</li>
-     *         <li>\u2705 {@code complete} \u2014 signals the end of the response</li>
-     *         <li>\u274c {@code error} \u2014 sends an error event if something goes wrong</li>
+     *         <li>📝 {@code delta} — partial text chunks as they arrive (streamed token-by-token)</li>
+     *         <li>🧠 {@code reasoning} — optional thinking steps from reasoning models</li>
+     *         <li>✅ {@code complete} — signals the end of the response</li>
+     *         <li>❌ {@code error} — sends an error event if something goes wrong</li>
      *       </ul>
      *   </li>
      * </ol>
@@ -207,7 +207,7 @@ public class CopilotChatRootAction implements RootAction {
             return;
         }
 
-        // \ud83d\udcf6 Use a streaming response to push SSE events back to the browser
+        // 📶 Use a streaming response to push SSE events back to the browser
         new StreamingHttpResponse(
                         writer -> {
                             try {
@@ -328,7 +328,7 @@ public class CopilotChatRootAction implements RootAction {
     }
 
     /**
-     * \ud83d\udc64 Returns the currently logged-in Jenkins user.
+     * 👤 Returns the currently logged-in Jenkins user.
      * Throws an {@link IllegalStateException} if called outside a request context
      * (e.g. background threads), acting as a safety guard.
      */
@@ -340,12 +340,12 @@ public class CopilotChatRootAction implements RootAction {
         return user;
     }
 
-    /** \ud83d\udce6 Shortcut: wraps a value in a 200 OK JSON response. */
+    /** 📦 Shortcut: wraps a value in a 200 OK JSON response. */
     private HttpResponse json(Object value) {
         return new JsonHttpResponse(200, value);
     }
 
-    /** \u274c Shortcut: wraps an error message in a 400 Bad Request JSON response. */
+    /** ❌ Shortcut: wraps an error message in a 400 Bad Request JSON response. */
     private HttpResponse error(String message) {
         return new JsonHttpResponse(400, Map.of("error", message));
     }

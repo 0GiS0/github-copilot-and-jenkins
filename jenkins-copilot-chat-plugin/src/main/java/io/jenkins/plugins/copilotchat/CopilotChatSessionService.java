@@ -283,7 +283,9 @@ public class CopilotChatSessionService {
      *
      * <p>Knowing which page the user is on helps the AI answer job-specific questions
      * without the user having to mention the job name explicitly.
-     * Example result: {@code "[Jenkins page context: /job/my-pipeline/]\n\nWhy did the last build fail?"}
+     * Example result: {@code "[Jenkins page context: /job/my-pipeline/]
+
+Why did the last build fail?"}
      */
     private static String enrichPromptWithContext(String prompt, String pagePath) {
         if (pagePath == null || pagePath.isBlank()) {

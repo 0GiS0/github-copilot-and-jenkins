@@ -8,21 +8,23 @@ import org.kohsuke.stapler.DataBoundSetter;
 /**
  * ⚙️ Global configuration for the Copilot Chat plugin.
  *
- * <p>This class is automatically registered by Jenkins as a global configuration section
- * (via {@code @Extension} + {@code GlobalConfiguration}). Its fields appear in
- * <em>Manage Jenkins → System</em> and are persisted in {@code copilotChatConfiguration.xml}.
+ * <p>This class is automatically registered by Jenkins as a global configuration section (via
+ * {@code @Extension} + {@code GlobalConfiguration}). Its fields appear in <em>Manage Jenkins →
+ * System</em> and are persisted in {@code copilotChatConfiguration.xml}.
  *
  * <p>Key settings:
+ *
  * <ul>
- *   <li>🔑 {@code clientId} — GitHub OAuth App client ID used during the Device Flow login.</li>
- *   <li>🌐 {@code cliUrl} — URL of the remote Copilot CLI server (e.g. {@code http://copilot-cli:3003}).
- *       When set, the plugin forwards requests to this server instead of spawning a local CLI process.</li>
- *   <li>🤖 {@code defaultModel} — The AI model used for new chat sessions (e.g. {@code gpt-5.4}).</li>
- *   <li>🔧 {@code availableTools} — Comma-separated list of MCP tool names the AI is allowed to invoke.
- *       Leave blank to allow all tools.</li>
- *   <li>⏱️ {@code requestTimeoutSeconds} — Maximum seconds to wait for a Copilot response before timing out.</li>
- *   <li>🏗️ Jenkins MCP settings — URL, username and API token for the Jenkins MCP server.</li>
- *   <li>🐙 GitHub MCP settings — URL and PAT for the GitHub MCP server.</li>
+ *   <li>🔑 {@code clientId} — GitHub OAuth App client ID used during the Device Flow login.
+ *   <li>🌐 {@code cliUrl} — URL of a remote Copilot CLI server. When left blank (recommended), the
+ *       plugin spawns a local CLI process per user using each user's own GitHub token.
+ *   <li>🤖 {@code defaultModel} — The AI model used for new chat sessions (e.g. {@code gpt-5.4}).
+ *   <li>🔧 {@code availableTools} — Comma-separated list of MCP tool names the AI is allowed to
+ *       invoke. Leave blank to allow all tools.
+ *   <li>⏱️ {@code requestTimeoutSeconds} — Maximum seconds to wait for a Copilot response before
+ *       timing out.
+ *   <li>🏗️ Jenkins MCP settings — URL, username and API token for the Jenkins MCP server.
+ *   <li>🐙 GitHub MCP settings — URL and PAT for the GitHub MCP server.
  * </ul>
  */
 @Extension
@@ -33,7 +35,7 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     // 🔑 GitHub OAuth App client ID (registered at github.com/settings/developers)
     private String clientId;
     private String cliPath;
-    private String cliUrl = "http://copilot-cli:3003";
+    private String cliUrl;
     private String defaultModel = DEFAULT_MODEL;
     private String availableTools = "";
     private int requestTimeoutSeconds = 120;
@@ -44,16 +46,16 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     private String githubMcpToken;
 
     /**
-     * 🏗️ Constructor called by Jenkins on startup.
-     * {@code load()} reads the persisted XML and populates the fields.
+     * 🏗️ Constructor called by Jenkins on startup. {@code load()} reads the persisted XML and
+     * populates the fields.
      */
     public CopilotChatConfiguration() {
         load();
     }
 
     /**
-     * 🔍 Convenience accessor — retrieves the singleton instance registered in Jenkins.
-     * Use this from other classes instead of calling {@code Jenkins.get().getDescriptor(...)}.
+     * 🔍 Convenience accessor — retrieves the singleton instance registered in Jenkins. Use this
+     * from other classes instead of calling {@code Jenkins.get().getDescriptor(...)}.
      */
     public static CopilotChatConfiguration get() {
         return GlobalConfiguration.all().get(CopilotChatConfiguration.class);
@@ -73,8 +75,8 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * 📂 Returns the local filesystem path to the Copilot CLI binary.
-     * Only used when {@link #getCliUrl()} is not set (local mode).
+     * 📂 Returns the local filesystem path to the Copilot CLI binary. Only used when {@link
+     * #getCliUrl()} is not set (local mode).
      */
     @CheckForNull
     public String getCliPath() {
@@ -89,9 +91,9 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * 🌐 Returns the URL of the remote Copilot CLI server.
-     * When this is set the plugin communicates with the CLI over HTTP instead of spawning
-     * a local process, which is the recommended setup inside Docker/Kubernetes.
+     * 🌐 Returns the URL of a remote Copilot CLI server, or {@code null} for local mode. When blank
+     * (default), the plugin spawns a local CLI process per user, authenticating with each user's
+     * own GitHub token.
      */
     @CheckForNull
     public String getCliUrl() {
@@ -106,8 +108,8 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * 🤖 Returns the default AI model ID.
-     * Falls back to {@link #DEFAULT_MODEL} when the configured value is blank.
+     * 🤖 Returns the default AI model ID. Falls back to {@link #DEFAULT_MODEL} when the configured
+     * value is blank.
      */
     public String getDefaultModel() {
         return defaultModel == null || defaultModel.isBlank() ? DEFAULT_MODEL : defaultModel;
@@ -121,8 +123,8 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * 🔧 Returns the comma-separated list of MCP tools the AI may use.
-     * An empty string means <em>all</em> tools are allowed.
+     * 🔧 Returns the comma-separated list of MCP tools the AI may use. An empty string means
+     * <em>all</em> tools are allowed.
      */
     public String getAvailableTools() {
         return availableTools == null ? "" : availableTools;
@@ -136,8 +138,8 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * ⏱️ Returns the maximum number of seconds to wait for a Copilot response.
-     * Defaults to 120 s when the stored value is invalid.
+     * ⏱️ Returns the maximum number of seconds to wait for a Copilot response. Defaults to 120 s
+     * when the stored value is invalid.
      */
     public int getRequestTimeoutSeconds() {
         return requestTimeoutSeconds <= 0 ? 120 : requestTimeoutSeconds;
@@ -151,10 +153,9 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * 🏗️ Returns the Jenkins MCP server URL.
-     * The MCP (Model Context Protocol) server exposes Jenkins operations (get jobs, trigger builds,
-     * etc.) as tools the AI can call. Defaults to {@code http://jenkins:8080/mcp-server/stateless}
-     * when left blank.
+     * 🏗️ Returns the Jenkins MCP server URL. The MCP (Model Context Protocol) server exposes
+     * Jenkins operations (get jobs, trigger builds, etc.) as tools the AI can call. Defaults to
+     * {@code http://jenkins:8080/mcp-server/stateless} when left blank.
      */
     @CheckForNull
     public String getJenkinsMcpUrl() {
@@ -196,9 +197,8 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * 🐙 Returns the GitHub MCP server URL.
-     * When configured, the AI can also interact with GitHub repositories
-     * (create branches, open PRs, edit files, etc.).
+     * 🐙 Returns the GitHub MCP server URL. When configured, the AI can also interact with GitHub
+     * repositories (create branches, open PRs, edit files, etc.).
      */
     @CheckForNull
     public String getGithubMcpUrl() {
@@ -226,8 +226,8 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     }
 
     /**
-     * ✅ Returns {@code true} when the minimum required configuration (client ID) is present.
-     * Used as a guard before starting the OAuth Device Flow.
+     * ✅ Returns {@code true} when the minimum required configuration (client ID) is present. Used
+     * as a guard before starting the OAuth Device Flow.
      */
     public boolean isConfigured() {
         return clientId != null && !clientId.isBlank();

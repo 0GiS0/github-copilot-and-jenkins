@@ -7,9 +7,10 @@ package io.jenkins.plugins.copilotchat;
  * completes the authorization on GitHub. Each poll returns one of three states:
  *
  * <ul>
- *   <li>⏳ <b>pending</b> — the user hasn't authorized yet; keep polling after {@code interval} seconds.</li>
- *   <li>✅ <b>authenticated</b> — authorization succeeded; {@code login} and {@code id} are set.</li>
- *   <li>❌ <b>failed</b> — authorization failed or expired; {@code error} describes the reason.</li>
+ *   <li>⏳ <b>pending</b> — the user hasn't authorized yet; keep polling after {@code interval}
+ *       seconds.
+ *   <li>✅ <b>authenticated</b> — authorization succeeded; {@code login} and {@code id} are set.
+ *   <li>❌ <b>failed</b> — authorization failed or expired; {@code error} describes the reason.
  * </ul>
  *
  * <p>The static factory methods make constructing each variant readable and self-documenting.
