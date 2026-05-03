@@ -1,30 +1,41 @@
 pipeline {
     agent any
-    
+
     options {
         ansiColor('xterm')
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds(abortPrevious: true)
     }
-    
+
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
         PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
-    
+
     parameters {
         choice(
             name: 'DOC_TYPE',
             choices: ['README', 'API', 'ALL'],
             description: 'Type of documentation to generate'
         )
+        string(
+            name: 'PR_NUMBER',
+            defaultValue: '',
+            description: 'Optional GitHub PR number. Uses CHANGE_ID automatically in multibranch PR builds.'
+        )
+        booleanParam(
+            name: 'WRITE_BACK_TO_PR',
+            defaultValue: true,
+            description: 'Commit generated documentation back to the existing PR branch when it is safe.'
+        )
     }
-    
+
     stages {
         stage('🔧 Setup') {
             steps {
-                echo '📦 Checking GitHub Copilot CLI installation...'
+            echo '📦 Checking GitHub Copilot CLI installation...'
                 sh '''
                     if ! command -v copilot >/dev/null 2>&1; then
                         echo "Installing GitHub Copilot CLI..."
@@ -32,119 +43,327 @@ pipeline {
                     fi
 
                     copilot --version
-                    echo "✅ GitHub Copilot CLI is ready"
+                    gh auth status >/dev/null
+                    gh auth setup-git
+                    echo "✅ GitHub Copilot CLI and GitHub CLI are ready"
                 '''
             }
         }
-        
-        stage('📂 Analyze Project') {
+
+        stage('🔎 Prepare PR Context') {
             steps {
-                echo '🔍 Analyzing project structure...'
+                echo '🔍 Detecting PR context, author permission, and documentation candidates...'
                 sh '''
-                    mkdir -p docs
-                    
-                    # Collect project information
-                    echo "Project Structure:" > project_info.txt
-                    find . -type f -name "*.ts" -o -name "*.js" | grep -v node_modules | head -30 >> project_info.txt
-                    echo "" >> project_info.txt
-                    
-                    echo "Package Info:" >> project_info.txt
-                    cat package.json >> project_info.txt 2>/dev/null || echo "No package.json found"
-                    
-                    echo "Project info collected"
+                    set -eu
+
+                    mkdir -p docs reports
+
+                    cat > reports/docs-generator.md <<EOF
+# Documentation Generator Report
+
+Generated: $(date)
+Build: #${BUILD_NUMBER}
+
+EOF
+
+                    if git log -1 --pretty=%B | grep -q '\[skip docs-generator\]'; then
+                        cat > reports/pr-context.env <<'EOF'
+SKIP_DOCS_GENERATOR=true
+PR_NUMBER=
+PR_URL=
+HEAD_BRANCH=
+BASE_BRANCH=
+AUTHOR_LOGIN=
+AUTHOR_PERMISSION=
+IS_CROSS_REPOSITORY=false
+CAN_WRITE=false
+EOF
+                        echo "## Result" >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        echo "Skipped because latest commit contains \`[skip docs-generator]\`." >> reports/docs-generator.md
+                        exit 0
+                    fi
+
+                    EFFECTIVE_PR="${PR_NUMBER:-${CHANGE_ID:-}}"
+                    if [ -z "$EFFECTIVE_PR" ]; then
+                        cat > reports/pr-context.env <<'EOF'
+SKIP_DOCS_GENERATOR=true
+PR_NUMBER=
+PR_URL=
+HEAD_BRANCH=
+BASE_BRANCH=
+AUTHOR_LOGIN=
+AUTHOR_PERMISSION=
+IS_CROSS_REPOSITORY=false
+CAN_WRITE=false
+EOF
+                        echo "## Result" >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        echo "Skipped because no PR was detected. This job only writes documentation for existing PRs." >> reports/docs-generator.md
+                        exit 0
+                    fi
+
+                    gh pr view "$EFFECTIVE_PR" --json number,url,headRefName,baseRefName,isCrossRepository,author,headRepositoryOwner > reports/pr.json
+                    gh repo view --json owner,name > reports/repo.json
+
+                    node - <<'NODE' > reports/permission-request.env
+const fs = require('fs');
+const pr = JSON.parse(fs.readFileSync('reports/pr.json', 'utf8'));
+const repo = JSON.parse(fs.readFileSync('reports/repo.json', 'utf8'));
+console.log(`REPO_OWNER=${repo.owner.login}`);
+console.log(`REPO_NAME=${repo.name}`);
+console.log(`AUTHOR_LOGIN=${pr.author.login}`);
+NODE
+                    . reports/permission-request.env
+
+                    gh api "repos/${REPO_OWNER}/${REPO_NAME}/collaborators/${AUTHOR_LOGIN}/permission" > reports/author-permission.json || cat > reports/author-permission.json <<'EOF'
+{"permission":"none","role_name":"none"}
+EOF
+
+                    node - <<'NODE' > reports/pr-context.env
+const fs = require('fs');
+const pr = JSON.parse(fs.readFileSync('reports/pr.json', 'utf8'));
+const repo = JSON.parse(fs.readFileSync('reports/repo.json', 'utf8'));
+const permission = JSON.parse(fs.readFileSync('reports/author-permission.json', 'utf8'));
+const authorPermission = permission.permission || permission.role_name || 'none';
+const allowedPermissions = new Set(['admin', 'maintain', 'write']);
+const sameRepo = !pr.isCrossRepository && pr.headRepositoryOwner.login === repo.owner.login;
+const canWrite = sameRepo && allowedPermissions.has(authorPermission);
+console.log('SKIP_DOCS_GENERATOR=false');
+console.log(`PR_NUMBER=${pr.number}`);
+console.log(`PR_URL=${pr.url}`);
+console.log(`HEAD_BRANCH=${pr.headRefName}`);
+console.log(`BASE_BRANCH=${pr.baseRefName}`);
+console.log(`AUTHOR_LOGIN=${pr.author.login}`);
+console.log(`AUTHOR_PERMISSION=${authorPermission}`);
+console.log(`IS_CROSS_REPOSITORY=${pr.isCrossRepository}`);
+console.log(`CAN_WRITE=${canWrite}`);
+NODE
+
+                    . reports/pr-context.env
+
+                    echo "## PR Context" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+                    echo "- PR: ${PR_URL}" >> reports/docs-generator.md
+                    echo "- Author: ${AUTHOR_LOGIN}" >> reports/docs-generator.md
+                    echo "- Author repository permission: ${AUTHOR_PERMISSION}" >> reports/docs-generator.md
+                    echo "- Source branch: ${HEAD_BRANCH}" >> reports/docs-generator.md
+                    echo "- Target branch: ${BASE_BRANCH}" >> reports/docs-generator.md
+                    echo "- Cross-repository PR: ${IS_CROSS_REPOSITORY}" >> reports/docs-generator.md
+                    echo "- Write-back enabled: ${WRITE_BACK_TO_PR}" >> reports/docs-generator.md
+                    echo "- Allowed to generate and push docs: ${CAN_WRITE}" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+
+                    if [ "$CAN_WRITE" != "true" ]; then
+                        echo "## Result" >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        echo "Skipped. Documentation generation only runs for same-repository PRs opened by users with admin, maintain, or write permission." >> reports/docs-generator.md
+                        exit 0
+                    fi
+
+                    git fetch origin "$HEAD_BRANCH"
+                    git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
+
+                    gh pr diff "$PR_NUMBER" --name-only > reports/pr-changed-files.txt
+
+                    grep -E '^(src|jenkins-copilot-chat-plugin/src|pipelines|scripts)/.*\.(ts|js|java|groovy|jenkinsfile)$|^(README|README\.en|docs)/.*\.md$' \
+                        reports/pr-changed-files.txt > reports/doc-candidates.raw || true
+                    while IFS= read -r file; do
+                        [ -n "$file" ] && [ -f "$file" ] && printf '%s\n' "$file"
+                    done < reports/doc-candidates.raw > reports/doc-candidates.txt
+
+                    echo "## Changed Files Considered" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+                    if [ -s reports/doc-candidates.txt ]; then
+                        sed 's/^/- /' reports/doc-candidates.txt >> reports/docs-generator.md
+                    else
+                        echo "No documentation-relevant changed files were found." >> reports/docs-generator.md
+                    fi
+                    echo "" >> reports/docs-generator.md
                 '''
             }
         }
-        
-        stage('📚 Generate README') {
+
+        stage('📚 Generate README Updates') {
             when {
                 expression { params.DOC_TYPE == 'README' || params.DOC_TYPE == 'ALL' }
             }
             steps {
-                echo '🤖 Generating README with Copilot...'
+                echo '🤖 Generating PR-aware README documentation with Copilot...'
                 sh '''
-                    echo "Generating README documentation..."
-                    
-                    # Extract key information from project
-                    PROJECT_NAME=$(cat package.json | jq -r '.name' 2>/dev/null || echo "Project")
-                    PROJECT_DESC=$(cat package.json | jq -r '.description' 2>/dev/null || echo "A demo project")
-                    
-                    # Ask Copilot to help generate documentation
-                    echo "# Generated Documentation" > docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    echo "## Project: $PROJECT_NAME" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    echo "$PROJECT_DESC" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    
-                    # Use Copilot to generate installation instructions
-                    echo "### Installation" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Generate concise npm installation instructions for this TypeScript project. Return Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
-                        echo '```bash' >> docs/GENERATED_README.md
-                        echo 'npm install' >> docs/GENERATED_README.md
-                        echo 'npm run build' >> docs/GENERATED_README.md
-                        echo '```' >> docs/GENERATED_README.md
-                    }
-                    echo "" >> docs/GENERATED_README.md
-                    
-                    # Use Copilot to explain project usage
-                    echo "### Usage" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Explain how to run this TypeScript Node.js project based on package.json. Return concise Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
-                        echo '```bash' >> docs/GENERATED_README.md
-                        echo 'npm run dev' >> docs/GENERATED_README.md
-                        echo '```' >> docs/GENERATED_README.md
-                    }
-                    
-                    echo "✅ README generated"
+                    set -eu
+                    . reports/pr-context.env
+                    [ "$CAN_WRITE" = "true" ] || exit 0
+
+                    if ! grep -Eq '^(README|README\.en|docs/|src/|jenkins-copilot-chat-plugin/src/|pipelines/|scripts/)' reports/doc-candidates.txt; then
+                        echo "## README Updates" >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        echo "Skipped because no changed files appear to affect README-level documentation." >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        exit 0
+                    fi
+
+                    cat > reports/readme-prompt.md <<'EOF'
+Review the changed files in this pull request and decide whether README-style documentation should be updated.
+If useful, create or update Markdown files under docs/ only. Prefer docs/PR_DOCUMENTATION.md for PR-specific notes.
+Do not modify source code, package files, Jenkinsfiles, existing README files, or files outside docs/.
+Do not include timestamps. Keep the result concise and reviewable.
+EOF
+
+                    {
+                        echo ""
+                        echo "Changed files:"
+                        cat reports/doc-candidates.txt
+                        echo ""
+                        echo "Relevant file excerpts:"
+                        while IFS= read -r file; do
+                            echo ""
+                            echo "--- $file ---"
+                            head -160 "$file"
+                        done < reports/doc-candidates.txt
+                    } >> reports/readme-prompt.md
+
+                    set +x
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat reports/readme-prompt.md)" > reports/readme-copilot-output.txt 2>&1
+                    copilot_status=$?
+                    set -x
+
+                    echo "## README Updates" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+                    head -120 reports/readme-copilot-output.txt >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+
+                    if [ "$copilot_status" -ne 0 ]; then
+                        exit "$copilot_status"
+                    fi
                 '''
             }
         }
-        
+
         stage('📖 Generate API Docs') {
             when {
                 expression { params.DOC_TYPE == 'API' || params.DOC_TYPE == 'ALL' }
             }
             steps {
-                echo '🤖 Generating API documentation with Copilot...'
+                echo '🤖 Generating PR-aware API documentation with Copilot...'
                 sh '''
-                    echo "Generating API documentation..."
-                    
-                    echo "# API Documentation" > docs/API.md
-                    echo "" >> docs/API.md
-                    echo "Generated: $(date)" >> docs/API.md
-                    echo "" >> docs/API.md
-                    
-                    # Document each TypeScript file
-                    for file in $(find src -name "*.ts" -type f | grep -v test | head -10); do
-                        echo "## $(basename $file)" >> docs/API.md
-                        echo "" >> docs/API.md
-                        echo "### Functions" >> docs/API.md
-                        echo "" >> docs/API.md
-                        
-                        # Extract function signatures and ask Copilot to document
-                        grep -E "^export (async )?function" "$file" | while read -r func; do
-                            echo "#### $func" >> docs/API.md
-                            echo "" >> docs/API.md
-                            copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Document this TypeScript function signature in concise Markdown. Include purpose, parameters, and return value when inferable: $func" 2>&1 | head -40 >> docs/API.md || echo "Function documentation" >> docs/API.md
-                            echo "" >> docs/API.md
-                        done
-                        
-                        echo "---" >> docs/API.md
-                        echo "" >> docs/API.md
-                    done
-                    
-                    echo "✅ API documentation generated"
+                    set -eu
+                    . reports/pr-context.env
+                    [ "$CAN_WRITE" = "true" ] || exit 0
+
+                    grep -E '^(src|jenkins-copilot-chat-plugin/src)/.*\.(ts|js|java)$' reports/doc-candidates.txt > reports/api-candidates.txt || true
+                    if [ ! -s reports/api-candidates.txt ]; then
+                        echo "## API Documentation" >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        echo "Skipped because no changed source files require API documentation." >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        exit 0
+                    fi
+
+                    cat > reports/api-prompt.md <<'EOF'
+Review the changed source files from this pull request and update API documentation only when the changes expose or alter behavior worth documenting.
+Create or update docs/API.md. Do not modify source code, package files, Jenkinsfiles, README files, or files outside docs/.
+Do not include timestamps. Keep the documentation concise and useful for reviewers.
+EOF
+
+                    {
+                        echo ""
+                        echo "Changed source files:"
+                        cat reports/api-candidates.txt
+                        echo ""
+                        echo "Relevant file excerpts:"
+                        while IFS= read -r file; do
+                            echo ""
+                            echo "--- $file ---"
+                            head -220 "$file"
+                        done < reports/api-candidates.txt
+                    } >> reports/api-prompt.md
+
+                    set +x
+                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "$(cat reports/api-prompt.md)" > reports/api-copilot-output.txt 2>&1
+                    copilot_status=$?
+                    set -x
+
+                    echo "## API Documentation" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+                    head -140 reports/api-copilot-output.txt >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+
+                    if [ "$copilot_status" -ne 0 ]; then
+                        exit "$copilot_status"
+                    fi
+                '''
+            }
+        }
+
+        stage('⬆️ Commit Documentation to PR') {
+            when {
+                expression { params.WRITE_BACK_TO_PR }
+            }
+            steps {
+                echo '📝 Committing generated documentation back to the PR branch when safe...'
+                sh '''
+                    set -eu
+                    . reports/pr-context.env
+
+                    if [ "$CAN_WRITE" != "true" ]; then
+                        echo "Skipping write-back because PR author is not allowed or PR is cross-repository."
+                        exit 0
+                    fi
+
+                    if git diff --name-only | grep -v '^docs/' | grep -q .; then
+                        echo "Copilot modified files outside docs/. Refusing to commit."
+                        git diff --name-only | grep -v '^docs/'
+                        exit 1
+                    fi
+
+                    if git diff --quiet -- docs; then
+                        echo "No documentation changes generated."
+                        echo "## Write-back" >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        echo "No documentation changes were generated." >> reports/docs-generator.md
+                        exit 0
+                    fi
+
+                    git diff -- docs > reports/generated-docs.patch
+
+                    git config user.name "jenkins-copilot"
+                    git config user.email "jenkins-copilot@users.noreply.github.com"
+
+                    git fetch origin "$HEAD_BRANCH"
+                    git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
+                    git apply reports/generated-docs.patch
+
+                    git add docs
+                    git commit -m "docs: update Copilot-generated documentation [skip docs-generator]"
+                    git push origin "HEAD:$HEAD_BRANCH"
+
+                    echo "## Write-back" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+                    echo "Committed generated documentation back to PR #${PR_NUMBER}." >> reports/docs-generator.md
                 '''
             }
         }
     }
-    
+
     post {
         always {
-            echo '📁 Archiving documentation...'
-            archiveArtifacts artifacts: 'docs/*.md', allowEmptyArchive: true
+            echo '📁 Archiving documentation and report...'
+            script {
+                if (fileExists('reports/docs-generator.md')) {
+                    def report = load 'scripts/md-to-html-report.groovy'
+                    report.convert('reports/docs-generator.md', 'reports/docs-generator.html', 'Documentation Generator Report')
+                }
+            }
+            archiveArtifacts artifacts: 'docs/*.md, reports/*.md, reports/*.txt, reports/*.html, reports/*.css, reports/*.json', allowEmptyArchive: true
+            publishHTML(target: [
+                reportDir: 'reports',
+                reportFiles: 'docs-generator.html',
+                reportName: 'Copilot Documentation Generator Report',
+                keepAll: true,
+                alwaysLinkToLastBuild: true,
+                allowMissing: true
+            ])
         }
         success {
             echo '✅ Documentation generation completed successfully!'
