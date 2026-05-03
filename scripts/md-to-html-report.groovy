@@ -150,8 +150,6 @@ static String renderMarkdown(String source) {
     output.join('\n')
 }
 
-private static final String CSS_PATH = 'scripts/report.css'
-
 /**
  * Converts a Markdown file to a styled HTML report.
  *
@@ -161,7 +159,7 @@ private static final String CSS_PATH = 'scripts/report.css'
  */
 void convert(String mdPath, String htmlPath, String title) {
     String markdown = readFile(file: mdPath, encoding: 'UTF-8')
-    String css = readFile(file: CSS_PATH, encoding: 'UTF-8')
+    String css = readFile(file: 'scripts/report.css', encoding: 'UTF-8')
     String body = renderMarkdown(markdown)
     String safeTitle = escapeHtml(title)
 

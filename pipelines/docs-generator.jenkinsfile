@@ -146,7 +146,7 @@ EOF
                     node - <<'NODE' > reports/pr-context.env
 const fs = require('fs');
 const pr = JSON.parse(fs.readFileSync('reports/pr.json', 'utf8'));
-const repoEnv = fs.readFileSync('reports/repo.env', 'utf8').trim().split('\n').reduce((acc, line) => {
+const repoEnv = fs.readFileSync('reports/repo.env', 'utf8').trim().split(String.fromCharCode(10)).reduce((acc, line) => {
     const index = line.indexOf('=');
     acc[line.slice(0, index)] = line.slice(index + 1);
     return acc;
