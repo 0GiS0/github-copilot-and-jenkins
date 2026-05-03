@@ -1,41 +1,43 @@
-# 🤖 Copilot Chat Plugin — Internals
+# 🤖 Copilot Chat Plugin — Cómo funciona por dentro
 
-This document explains how the **Copilot Chat** Jenkins plugin is architected and how each
-piece of the Jenkins plugin system (described in [how-jenkins-plugins-work.md](./how-jenkins-plugins-work.md))
-was used to build it.
+🇬🇧 [Read in English](copilot-chat-plugin-internals.en.md)
+
+Este documento explica la arquitectura del plugin **Copilot Chat** para Jenkins y cómo cada
+pieza del sistema de plugins de Jenkins (descrita en [how-jenkins-plugins-work.md](./how-jenkins-plugins-work.md))
+se usó para construirlo.
 
 ---
 
-## 🗺️ Architecture Overview
+## 🗺️ Visión General de la Arquitectura
 
 ```
-Browser (chat widget)
+Navegador (widget de chat)
    │  HTTP / Server-Sent Events (SSE)
    ▼
-CopilotChatRootAction        ← Stapler RootAction  (REST endpoints)
-   │                            + CopilotChatPageDecorator (injects JS/CSS)
+CopilotChatRootAction        ← Stapler RootAction  (endpoints REST)
+   │                            + CopilotChatPageDecorator (inyecta JS/CSS)
    │
    ├── DeviceFlowAuthService  ← GitHub OAuth 2.0 Device Flow
-   │      └── GitHubTokenStore  ← persists token as Jenkins UserProperty
+   │      └── GitHubTokenStore  ← persiste el token como UserProperty de Jenkins
    │
-   └── CopilotChatSessionService  ← manages per-user AI sessions
-          └── CopilotClientFactory  ← creates Copilot SDK clients
+   └── CopilotChatSessionService  ← gestiona las sesiones de IA por usuario
+          └── CopilotClientFactory  ← crea clientes del SDK de Copilot
                  └── CopilotClient (SDK)
                         └── CopilotSession (SDK)
-                               ├── Jenkins MCP server  ← calls Jenkins API tools
-                               └── GitHub MCP server   ← calls GitHub API tools
+                               ├── Servidor MCP de Jenkins  ← llama a herramientas de la API de Jenkins
+                               └── Servidor MCP de GitHub   ← llama a herramientas de la API de GitHub
 ```
 
 ---
 
-## 🧩 How Each Jenkins Building Block Was Used
+## 🧩 Cómo se usó cada bloque de Jenkins
 
-### `RootAction` → REST API + Sidebar Link
+### `RootAction` → API REST + Enlace en la Barra Lateral
 
-`CopilotChatRootAction` implements `RootAction` which gives us:
-- A URL namespace at `/copilot-chat/`
-- A sidebar link with a custom icon (SVG symbol registered in `webapp/images/symbols/`)
-- Public `doXxx()` methods that Stapler maps to HTTP endpoints automatically
+`CopilotChatRootAction` implementa `RootAction`, lo que nos da:
+- Un espacio de nombres de URL en `/copilot-chat/`
+- Un enlace en la barra lateral con un icono personalizado (símbolo SVG registrado en `webapp/images/symbols/`)
+- Métodos públicos `doXxx()` que Stapler mapea automáticamente a endpoints HTTP
 
 ```
 GET  /copilot-chat/startLogin   → doStartLogin()
@@ -46,69 +48,69 @@ GET  /copilot-chat/models       → doModels()
 POST /copilot-chat/sendMessage  → doSendMessage(request, response)
 ```
 
-No routing table or Spring configuration — just method naming conventions.
+Sin tabla de rutas ni configuración de Spring — solo convenciones de nomenclatura de métodos.
 
 ---
 
-### `PageDecorator` → Injecting the Chat Widget
+### `PageDecorator` → Inyectar el Widget de Chat
 
-`CopilotChatPageDecorator` is an empty class extending `PageDecorator`.
-The real work happens in `CopilotChatPageDecorator/footer.jelly`, which Jenkins
-renders at the bottom of **every page**. The Jelly template:
+`CopilotChatPageDecorator` es una clase vacía que extiende `PageDecorator`.
+El trabajo real ocurre en `CopilotChatPageDecorator/footer.jelly`, que Jenkins
+renderiza al final de **todas las páginas**. La plantilla Jelly:
 
-1. Loads `copilot-chat.css` and `copilot-chat.js` from `webapp/`.
-2. Renders the chat widget `<div>` that the JavaScript attaches to.
+1. Carga `copilot-chat.css` y `copilot-chat.js` desde `webapp/`.
+2. Renderiza el `<div>` del widget de chat al que se enlaza el JavaScript.
 
-Result: the chat bubble appears on all Jenkins pages without changing any core Jenkins code.
-
----
-
-### `GlobalConfiguration` → Plugin Settings
-
-`CopilotChatConfiguration` stores all plugin settings in `$JENKINS_HOME/copilotChatConfiguration.xml`:
-
-| Field | Purpose |
-|-------|---------|
-| `clientId` | GitHub OAuth App client ID for Device Flow |
-| `cliUrl` | URL of the remote Copilot CLI HTTP server |
-| `cliPath` | Path to a local Copilot CLI binary (alternative) |
-| `defaultModel` | AI model to use (e.g. `gpt-5.4`) |
-| `availableTools` | Comma-separated MCP tools the AI may call |
-| `requestTimeoutSeconds` | Streaming timeout |
-| `jenkinsMcpUrl/Username/Token` | Credentials for the Jenkins MCP server |
-| `githubMcpUrl/Token` | Credentials for the GitHub MCP server |
-
-The `config.jelly` template renders all these fields as a form in *Manage Jenkins → System*.
-`@DataBoundSetter` methods are called automatically when the user saves the form.
+Resultado: la burbuja de chat aparece en todas las páginas de Jenkins sin modificar ningún código del núcleo.
 
 ---
 
-### `UserProperty` → Storing GitHub Tokens Per User
+### `GlobalConfiguration` → Ajustes del Plugin
 
-`CopilotTokenUserProperty` stores three values per Jenkins user:
-- The GitHub OAuth **access token** (encrypted with Jenkins `Secret`)
-- The GitHub **login** (username string)
-- The numeric GitHub **user ID**
+`CopilotChatConfiguration` almacena todos los ajustes del plugin en `$JENKINS_HOME/copilotChatConfiguration.xml`:
 
-`GitHubTokenStore` acts as a DAO on top of this:
+| Campo | Propósito |
+|-------|-----------|
+| `clientId` | Client ID de la OAuth App de GitHub para el Device Flow |
+| `cliUrl` | URL del servidor remoto Copilot CLI HTTP |
+| `cliPath` | Ruta a un binario local de Copilot CLI (alternativa) |
+| `defaultModel` | Modelo de IA a usar (p. ej. `gpt-5.4`) |
+| `availableTools` | Herramientas MCP separadas por comas que la IA puede llamar |
+| `requestTimeoutSeconds` | Timeout de streaming |
+| `jenkinsMcpUrl/Username/Token` | Credenciales para el servidor MCP de Jenkins |
+| `githubMcpUrl/Token` | Credenciales para el servidor MCP de GitHub |
+
+La plantilla `config.jelly` renderiza todos estos campos como un formulario en *Administrar Jenkins → Sistema*.
+Los métodos `@DataBoundSetter` se llaman automáticamente cuando el usuario guarda el formulario.
+
+---
+
+### `UserProperty` → Almacenar Tokens de GitHub por Usuario
+
+`CopilotTokenUserProperty` almacena tres valores por usuario de Jenkins:
+- El **token de acceso** OAuth de GitHub (cifrado con `Secret` de Jenkins)
+- El **login** de GitHub (cadena de nombre de usuario)
+- El **ID de usuario** numérico de GitHub
+
+`GitHubTokenStore` actúa como un DAO sobre esto:
 ```java
-tokenStore.save(user, accessToken, login, id);   // after OAuth success
-tokenStore.getToken(user);                         // before each API call
-tokenStore.delete(user);                           // on logout
+tokenStore.save(user, accessToken, login, id);   // tras el éxito del OAuth
+tokenStore.getToken(user);                         // antes de cada llamada a la API
+tokenStore.delete(user);                           // al cerrar sesión
 ```
 
-Tokens are encrypted at rest — Jenkins uses AES with a master key stored in `$JENKINS_HOME/secrets/`.
+Los tokens se cifran en reposo — Jenkins usa AES con una clave maestra almacenada en `$JENKINS_HOME/secrets/`.
 
 ---
 
 ## 🔑 GitHub OAuth 2.0 Device Flow
 
-The plugin uses the **Device Authorization Grant** (RFC 8628) — the OAuth flow designed for
-devices that can't open a browser. This is ideal here because the Jenkins server itself
-initiates the flow on behalf of the browser.
+El plugin usa el **Device Authorization Grant** (RFC 8628) — el flujo OAuth diseñado para
+dispositivos que no pueden abrir un navegador. Esto es ideal aquí porque el propio servidor Jenkins
+inicia el flujo en nombre del navegador.
 
 ```
-Browser            Jenkins server         GitHub
+Navegador          Servidor Jenkins        GitHub
    │                    │                    │
    │── Click Login ────►│                    │
    │                    │── POST /device/code►│
@@ -117,9 +119,9 @@ Browser            Jenkins server         GitHub
    │     userCode,      │                    │
    │     verificationUri}                    │
    │                    │                    │
-   │  (user visits verificationUri, types userCode on GitHub)
+   │  (el usuario visita verificationUri y escribe el userCode en GitHub)
    │                    │                    │
-   │── Poll every 5s ──►│── POST /token ─────►│
+   │── Poll cada 5s ───►│── POST /token ─────►│
    │                    │◄── authorization_pending
    │── Poll ────────────►│── POST /token ─────►│
    │                    │◄── {access_token} ──│
@@ -127,133 +129,133 @@ Browser            Jenkins server         GitHub
    │    login, id       │── GET /user ────────►│
    │                    │◄── {login, id} ─────│
    │                    │                    │
-   │                    │ save token to UserProperty
+   │                    │ guarda token en UserProperty
 ```
 
-Key implementation detail: `pendingLogins` is a `ConcurrentHashMap` that stores
-in-flight login state between the start and poll calls. It's keyed by a random UUID
-(`loginId`) so multiple users can log in concurrently.
+Detalle de implementación clave: `pendingLogins` es un `ConcurrentHashMap` que almacena
+el estado de los logins en curso entre las llamadas de inicio y poll. Está indexado por un UUID aleatorio
+(`loginId`) para que múltiples usuarios puedan iniciar sesión de forma concurrente.
 
 ---
 
-## 💬 Session Management (`CopilotChatSessionService`)
+## 💬 Gestión de Sesiones (`CopilotChatSessionService`)
 
-Each Jenkins user gets one long-lived `UserChatSession` that survives across multiple
-chat turns (maintaining conversation history):
+Cada usuario de Jenkins tiene una `UserChatSession` de larga duración que sobrevive a múltiples
+turnos de chat (manteniendo el historial de conversación):
 
 ```java
 private record UserChatSession(
-    CopilotClient client,    // connection to the Copilot CLI
-    CopilotSession session,  // stateful AI conversation
-    String model             // which model this session uses
+    CopilotClient client,    // conexión al CLI de Copilot
+    CopilotSession session,  // conversación de IA con estado
+    String model             // modelo que usa esta sesión
 ) {}
 ```
 
-Sessions are cached in a `ConcurrentHashMap<String, UserChatSession>` keyed by Jenkins user ID.
+Las sesiones se cachean en un `ConcurrentHashMap<String, UserChatSession>` indexado por el ID de usuario de Jenkins.
 
-**Session creation steps:**
-1. `CopilotClientFactory` creates a `CopilotClient` (either pointing at the remote CLI server or a local binary).
-2. `client.start()` starts the CLI process / connects to the remote server.
-3. `client.createSession(config)` opens an AI conversation with:
-   - The chosen model
-   - Streaming enabled
-   - A system message describing Jenkins context and available tools
-   - MCP server registrations (Jenkins + optionally GitHub)
-4. A `CountDownLatch` waits for MCP servers to finish loading before allowing messages.
+**Pasos de creación de sesión:**
+1. `CopilotClientFactory` crea un `CopilotClient` (apuntando al servidor CLI remoto o a un binario local).
+2. `client.start()` inicia el proceso CLI / conecta al servidor remoto.
+3. `client.createSession(config)` abre una conversación de IA con:
+   - El modelo elegido
+   - Streaming habilitado
+   - Un mensaje de sistema describiendo el contexto de Jenkins y las herramientas disponibles
+   - Registros de servidores MCP (Jenkins + opcionalmente GitHub)
+4. Un `CountDownLatch` espera a que los servidores MCP terminen de cargar antes de permitir mensajes.
 
-**Model switching:** if the user selects a different model, the old session is stopped and a new one is created transparently.
-
----
-
-## 🌐 MCP Server Integration
-
-MCP (Model Context Protocol) servers expose operations as **tools** the AI can call autonomously.
-Two MCP servers are registered per session:
-
-### 🏗️ Jenkins MCP (`jenkins`)
-Always registered. Exposes tools for:
-- Reading jobs, builds, logs, test results
-- Triggering builds, replaying pipelines
-- Finding SCM (Git) URLs for jobs
-
-Authentication: HTTP Basic (username + API token encoded as Base64).
-
-### 🐙 GitHub MCP (`github`)
-Registered only when configured. Exposes tools for:
-- Reading and editing files in repositories
-- Creating branches and pull requests
-- Searching issues and code
-
-Authentication: HTTP Bearer token (GitHub Personal Access Token).
-
-This combination lets the AI answer questions like:
-> *"Why did the last build fail?"* → calls `getBuildLog()`  
-> *"Fix the Jenkinsfile and open a PR"* → calls `getJobScm()` + `createBranch()` + `editFile()` + `createPullRequest()`
+**Cambio de modelo:** si el usuario selecciona un modelo diferente, la sesión anterior se detiene y se crea una nueva de forma transparente.
 
 ---
 
-## 📡 Streaming Responses (Server-Sent Events)
+## 🌐 Integración con Servidores MCP
 
-The AI response is streamed token-by-token using **Server-Sent Events (SSE)**.
+Los servidores MCP (Model Context Protocol) exponen operaciones como **herramientas** que la IA puede llamar de forma autónoma.
+Se registran dos servidores MCP por sesión:
 
-### Why SSE?
-- Native browser support (`EventSource` API or `fetch()` with streaming)
-- One-directional server→client push over a standard HTTP connection
-- Works through Jenkins' existing HTTP stack without WebSocket setup
+### 🏗️ MCP de Jenkins (`jenkins`)
+Siempre registrado. Expone herramientas para:
+- Leer jobs, builds, logs, resultados de tests
+- Lanzar builds, repetir pipelines
+- Encontrar URLs SCM (Git) de los jobs
 
-### How it works
+Autenticación: HTTP Basic (usuario + token de API codificado en Base64).
 
-`StreamingHttpResponse` sets response headers and keeps the connection open:
+### 🐙 MCP de GitHub (`github`)
+Se registra solo cuando está configurado. Expone herramientas para:
+- Leer y editar archivos en repositorios
+- Crear ramas y pull requests
+- Buscar issues y código
+
+Autenticación: HTTP Bearer token (Personal Access Token de GitHub).
+
+Esta combinación permite a la IA responder preguntas como:
+> *"¿Por qué falló el último build?"* → llama a `getBuildLog()`  
+> *"Arregla el Jenkinsfile y abre un PR"* → llama a `getJobScm()` + `createBranch()` + `editFile()` + `createPullRequest()`
+
+---
+
+## 📡 Respuestas en Streaming (Server-Sent Events)
+
+La respuesta de la IA se transmite token a token usando **Server-Sent Events (SSE)**.
+
+### ¿Por qué SSE?
+- Soporte nativo en el navegador (API `EventSource` o `fetch()` con streaming)
+- Push unidireccional servidor→cliente sobre una conexión HTTP estándar
+- Funciona con la pila HTTP existente de Jenkins sin necesidad de WebSockets
+
+### Cómo funciona
+
+`StreamingHttpResponse` establece las cabeceras de respuesta y mantiene la conexión abierta:
 ```
 Content-Type: text/event-stream
 Cache-Control: no-cache
-X-Accel-Buffering: no   ← disables nginx buffering
+X-Accel-Buffering: no   ← deshabilita el buffering de nginx
 ```
 
-The Copilot SDK fires events as they arrive from the AI model. The plugin registers
-four listeners per chat turn:
+El SDK de Copilot dispara eventos según van llegando del modelo de IA. El plugin registra
+cuatro listeners por turno de chat:
 
-| SDK Event | SSE event sent to browser |
-|-----------|--------------------------|
+| Evento del SDK | Evento SSE enviado al navegador |
+|----------------|--------------------------------|
 | `AssistantReasoningEvent` | `{"type":"reasoning","content":"..."}` |
 | `AssistantMessageDeltaEvent` | `{"type":"delta","content":"..."}` |
-| `AssistantMessageEvent` | (fallback, if no deltas) |
+| `AssistantMessageEvent` | (fallback, si no hay deltas) |
 | `SessionIdleEvent` | `{"type":"complete"}` |
 | `SessionErrorEvent` | `{"type":"error","message":"..."}` |
 
-The JavaScript in `copilot-chat.js` reads these events and appends deltas to the chat bubble in real time.
+El JavaScript en `copilot-chat.js` lee estos eventos y añade los deltas al widget de chat en tiempo real.
 
-Each event listener is stored as a `Closeable` and removed after the turn completes (or errors)
-to avoid memory leaks from lingering subscriptions.
-
----
-
-## 🔌 Copilot SDK Client Modes
-
-`CopilotClientFactory` supports two deployment modes:
-
-| Mode | When to use | How it works |
-|------|------------|-------------|
-| **Remote CLI server** | Docker / Kubernetes | Set `cliUrl`. The SDK sends HTTP requests to a running `copilot-cli` container. No GitHub token needed on the Jenkins side. |
-| **Local CLI** | Development / bare metal | Leave `cliUrl` blank. The SDK spawns a local `copilot` CLI process using the user's GitHub token. Optionally set `cliPath` for a specific binary. |
-
-The recommended setup (used in the Dev Container) is the remote CLI server mode — the `copilot-cli` service in `docker-compose.yml` handles all Copilot authentication and model access.
+Cada listener de eventos se almacena como `Closeable` y se elimina tras completarse el turno (o al producirse un error)
+para evitar fugas de memoria por suscripciones residuales.
 
 ---
 
-## 🛡️ Security Considerations
+## 🔌 Modos del Cliente SDK de Copilot
 
-- **Token encryption**: GitHub tokens are stored as `hudson.util.Secret`, AES-encrypted with Jenkins' master key.
-- **Permission check**: every endpoint calls `Jenkins.get().checkPermission(Jenkins.READ)` before processing.
-- **User isolation**: sessions and tokens are keyed by Jenkins user ID — one user cannot access another's session or token.
-- **No token exposure**: `CopilotClientOptions.setUseLoggedInUser(false)` prevents the SDK from reading tokens from the system Git config.
+`CopilotClientFactory` admite dos modos de despliegue:
+
+| Modo | Cuándo usarlo | Cómo funciona |
+|------|--------------|---------------|
+| **Servidor CLI remoto** | Docker / Kubernetes | Establece `cliUrl`. El SDK envía peticiones HTTP a un contenedor `copilot-cli` en ejecución. No se necesita token de GitHub en el lado de Jenkins. |
+| **CLI local** | Desarrollo / metal desnudo | Deja `cliUrl` en blanco. El SDK lanza un proceso local `copilot` CLI usando el token de GitHub del usuario. Opcionalmente establece `cliPath` para un binario específico. |
+
+La configuración recomendada (usada en el Dev Container) es el modo de servidor CLI remoto — el servicio `copilot-cli` en `docker-compose.yml` gestiona toda la autenticación de Copilot y el acceso a los modelos.
 
 ---
 
-## 📖 Related Documentation
+## 🛡️ Consideraciones de Seguridad
 
-- [How Jenkins Plugins Work](./how-jenkins-plugins-work.md)
+- **Cifrado de tokens**: los tokens de GitHub se almacenan como `hudson.util.Secret`, cifrados con AES usando la clave maestra de Jenkins.
+- **Comprobación de permisos**: cada endpoint llama a `Jenkins.get().checkPermission(Jenkins.READ)` antes de procesar.
+- **Aislamiento de usuarios**: las sesiones y los tokens están indexados por ID de usuario de Jenkins — un usuario no puede acceder a la sesión o token de otro.
+- **Sin exposición de tokens**: `CopilotClientOptions.setUseLoggedInUser(false)` evita que el SDK lea tokens de la configuración de Git del sistema.
+
+---
+
+## 📖 Documentación Relacionada
+
+- [Cómo funcionan los plugins de Jenkins](./how-jenkins-plugins-work.md)
 - [Jenkins Plugin Developer Guide](https://www.jenkins.io/doc/developer/)
 - [GitHub Device Flow (RFC 8628)](https://datatracker.ietf.org/doc/html/rfc8628)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Server-Sent Events spec](https://html.spec.whatwg.org/multipage/server-sent-events.html)
+- [Especificación Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html)
