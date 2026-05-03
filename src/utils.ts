@@ -25,6 +25,9 @@ export function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+/**
+ * Trim leading/trailing whitespace and collapse internal whitespace sequences to a single space.
+ */
 export function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
