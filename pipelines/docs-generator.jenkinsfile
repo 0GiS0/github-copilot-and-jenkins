@@ -401,7 +401,7 @@ EOF
                     git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git"
 
                     git fetch origin "$HEAD_BRANCH"
-                    git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
+                    git checkout -f -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
                     git apply reports/generated-docs.patch
 
                     git add docs
