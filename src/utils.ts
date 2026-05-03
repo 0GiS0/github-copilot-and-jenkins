@@ -25,6 +25,10 @@ export function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+export function normalizeWhitespace(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
 /**
  * Validate an email address
  */

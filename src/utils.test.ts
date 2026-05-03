@@ -1,4 +1,4 @@
-import { sum, average, isValidEmail, generateRandomString, deepClone, formatDate } from './utils';
+import { sum, average, isValidEmail, generateRandomString, deepClone, formatDate, normalizeWhitespace } from './utils';
 
 describe('Utils', () => {
   describe('sum', () => {
@@ -67,6 +67,12 @@ describe('Utils', () => {
     it('should format date as YYYY-MM-DD', () => {
       const date = new Date('2024-03-15T10:30:00Z');
       expect(formatDate(date)).toBe('2024-03-15');
+    });
+  });
+
+  describe('normalizeWhitespace', () => {
+    it('should trim and collapse repeated whitespace', () => {
+      expect(normalizeWhitespace('  hello   from\njenkins  ')).toBe('hello from jenkins');
     });
   });
 });
