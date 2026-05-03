@@ -166,7 +166,7 @@ NODE
 
                     gh pr diff "$PR_NUMBER" --name-only > reports/pr-changed-files.txt
 
-                    grep -E '^(src|jenkins-copilot-chat-plugin/src|pipelines|scripts)/.*\.(ts|js|java|groovy|jenkinsfile)$|^(README|README\.en|docs)/.*\.md$' \
+                    grep -E '^(src|jenkins-copilot-chat-plugin/src|pipelines|scripts)/.*[.](ts|js|java|groovy|jenkinsfile)$|^(README|README[.]en|docs)/.*[.]md$' \
                         reports/pr-changed-files.txt > reports/doc-candidates.raw || true
                     while IFS= read -r file; do
                         [ -n "$file" ] && [ -f "$file" ] && printf '%s\n' "$file"
@@ -195,7 +195,7 @@ NODE
                     . reports/pr-context.env
                     [ "$CAN_WRITE" = "true" ] || exit 0
 
-                    if ! grep -Eq '^(README|README\.en|docs/|src/|jenkins-copilot-chat-plugin/src/|pipelines/|scripts/)' reports/doc-candidates.txt; then
+                    if ! grep -Eq '^(README|README[.]en|docs/|src/|jenkins-copilot-chat-plugin/src/|pipelines/|scripts/)' reports/doc-candidates.txt; then
                         echo "## README Updates" >> reports/docs-generator.md
                         echo "" >> reports/docs-generator.md
                         echo "Skipped because no changed files appear to affect README-level documentation." >> reports/docs-generator.md
@@ -251,7 +251,7 @@ EOF
                     . reports/pr-context.env
                     [ "$CAN_WRITE" = "true" ] || exit 0
 
-                    grep -E '^(src|jenkins-copilot-chat-plugin/src)/.*\.(ts|js|java)$' reports/doc-candidates.txt > reports/api-candidates.txt || true
+                    grep -E '^(src|jenkins-copilot-chat-plugin/src)/.*[.](ts|js|java)$' reports/doc-candidates.txt > reports/api-candidates.txt || true
                     if [ ! -s reports/api-candidates.txt ]; then
                         echo "## API Documentation" >> reports/docs-generator.md
                         echo "" >> reports/docs-generator.md
