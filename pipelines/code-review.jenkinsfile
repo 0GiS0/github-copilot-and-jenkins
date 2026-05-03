@@ -103,7 +103,21 @@ EOF
     post {
         always {
             echo '📁 Archiving review report...'
-            archiveArtifacts artifacts: 'reports/*.md', allowEmptyArchive: true
+            script {
+                if (fileExists('reports/code-review.md')) {
+                    def report = load 'scripts/md-to-html-report.groovy'
+                    report.convert('reports/code-review.md', 'reports/code-review.html', 'Code Review Report')
+                }
+            }
+            archiveArtifacts artifacts: 'reports/*.md, reports/*.html, reports/*.css', allowEmptyArchive: true
+            publishHTML(target: [
+                reportDir: 'reports',
+                reportFiles: 'code-review.html',
+                reportName: 'Copilot Code Review Report',
+                keepAll: true,
+                alwaysLinkToLastBuild: true,
+                allowMissing: true
+            ])
         }
         success {
             echo '✅ Code review pipeline completed successfully!'
