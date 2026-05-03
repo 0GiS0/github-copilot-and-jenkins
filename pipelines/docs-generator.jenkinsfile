@@ -196,6 +196,22 @@ NODE
                     git fetch origin "$HEAD_BRANCH"
                     git checkout -B "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
 
+                    if git log -1 --pretty=%B | grep -Fq '[skip docs-generator]'; then
+                        node - <<'NODE'
+const fs = require('fs');
+const envPath = 'reports/pr-context.env';
+const lines = fs.readFileSync(envPath, 'utf8').split(String.fromCharCode(10));
+const updated = lines.map(line => line.startsWith('SKIP_DOCS_GENERATOR=') ? 'SKIP_DOCS_GENERATOR=true' : line);
+fs.writeFileSync(envPath, updated.join(String.fromCharCode(10)));
+NODE
+                        : > reports/doc-candidates.txt
+                        : > reports/comment-candidates.txt
+                        echo "## Result" >> reports/docs-generator.md
+                        echo "" >> reports/docs-generator.md
+                        echo "Skipped because the PR head commit contains [skip docs-generator]." >> reports/docs-generator.md
+                        exit 0
+                    fi
+
                                         curl -fsSL \
                                                 -H "Authorization: Bearer ${GH_TOKEN}" \
                                                 -H "Accept: application/vnd.github+json" \
@@ -388,6 +404,10 @@ EOF
 
                     if [ ! -s reports/modified-files.txt ]; then
                         echo "No documentation changes generated."
+                        cat > reports/write-back.env <<'EOF'
+DOCS_GENERATOR_COMMITTED=false
+DOCS_GENERATOR_COMMIT=
+EOF
                         echo "## Write-back" >> reports/docs-generator.md
                         echo "" >> reports/docs-generator.md
                         echo "No documentation or source-comment changes were generated." >> reports/docs-generator.md
@@ -410,11 +430,88 @@ EOF
                     done < reports/comment-candidates.txt
 
                     git commit -m "docs: update Copilot-generated documentation [skip docs-generator]"
+                    generated_commit=$(git rev-parse HEAD)
                     git push origin "HEAD:$HEAD_BRANCH"
+
+                    cat > reports/write-back.env <<EOF
+DOCS_GENERATOR_COMMITTED=true
+DOCS_GENERATOR_COMMIT=${generated_commit}
+EOF
 
                     echo "## Write-back" >> reports/docs-generator.md
                     echo "" >> reports/docs-generator.md
-                    echo "Committed generated documentation/comment updates back to PR #${PR_NUMBER}." >> reports/docs-generator.md
+                    echo "Committed generated documentation/comment updates back to PR #${PR_NUMBER}: ${generated_commit}." >> reports/docs-generator.md
+                '''
+            }
+        }
+
+        stage('💬 Comment on PR') {
+            steps {
+                echo '💬 Posting documentation generator summary to the PR...'
+                sh '''
+                    set -eu
+
+                    if [ ! -f reports/pr-context.env ]; then
+                        echo "No PR context available; skipping PR comment."
+                        exit 0
+                    fi
+
+                    . reports/pr-context.env
+                    if [ -z "$PR_NUMBER" ]; then
+                        echo "No PR number available; skipping PR comment."
+                        exit 0
+                    fi
+
+                    if [ -f reports/write-back.env ]; then
+                        . reports/write-back.env
+                    else
+                        DOCS_GENERATOR_COMMITTED=false
+                        DOCS_GENERATOR_COMMIT=
+                    fi
+
+                    considered_count=0
+                    comment_count=0
+                    [ -f reports/doc-candidates.txt ] && considered_count=$(grep -c . reports/doc-candidates.txt || true)
+                    [ -f reports/comment-candidates.txt ] && comment_count=$(grep -c . reports/comment-candidates.txt || true)
+
+                    result_line="No documentation changes were committed."
+                    if [ "$DOCS_GENERATOR_COMMITTED" = "true" ]; then
+                        result_line="Committed generated documentation/comment updates: ${DOCS_GENERATOR_COMMIT}."
+                    elif [ "$CAN_WRITE" != "true" ]; then
+                        result_line="Skipped write-back because the PR author is not allowed or the PR is cross-repository."
+                    fi
+
+                    cat > reports/pr-comment.md <<EOF
+## Copilot Documentation Generator
+
+Jenkins analyzed this PR for documentation updates.
+
+- Build: ${BUILD_URL}
+- Author permission: ${AUTHOR_PERMISSION:-unknown}
+- Files considered: ${considered_count}
+- Source files eligible for comments: ${comment_count}
+- Result: ${result_line}
+
+See the Jenkins HTML report for details.
+EOF
+
+                    node - <<'NODE' > reports/pr-comment.json
+const fs = require('fs');
+const body = fs.readFileSync('reports/pr-comment.md', 'utf8');
+process.stdout.write(JSON.stringify({ body }));
+NODE
+
+                    curl -fsSL \
+                        -X POST \
+                        -H "Authorization: Bearer ${GH_TOKEN}" \
+                        -H "Accept: application/vnd.github+json" \
+                        -H "Content-Type: application/json" \
+                        --data @reports/pr-comment.json \
+                        "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues/${PR_NUMBER}/comments" > reports/pr-comment-response.json
+
+                    echo "## PR Comment" >> reports/docs-generator.md
+                    echo "" >> reports/docs-generator.md
+                    echo "Posted a documentation-generator summary comment to PR #${PR_NUMBER}." >> reports/docs-generator.md
                 '''
             }
         }
