@@ -9,17 +9,18 @@ import org.kohsuke.stapler.StaplerResponse2;
 /**
  * 📦 A Stapler {@link HttpResponse} that serializes a Java object as JSON.
  *
- * <p>Stapler (the MVC framework behind Jenkins) uses {@link HttpResponse} objects returned
- * from action methods to write the HTTP response. This class wraps any Java object,
- * serializes it with Jackson, and writes it with {@code Content-Type: application/json}.
+ * <p>Stapler (the MVC framework behind Jenkins) uses {@link HttpResponse} objects returned from
+ * action methods to write the HTTP response. This class wraps any Java object, serializes it with
+ * Jackson, and writes it with {@code Content-Type: application/json}.
  *
  * <p>Typical usage inside {@link CopilotChatRootAction}:
- * <pre>{@code
- *   // Return 200 OK with a JSON body
- *   return new JsonHttpResponse(200, Map.of("status", "ok"));
  *
- *   // Return 400 Bad Request with an error message
- *   return new JsonHttpResponse(400, Map.of("error", "prompt is required"));
+ * <pre>{@code
+ * // Return 200 OK with a JSON body
+ * return new JsonHttpResponse(200, Map.of("status", "ok"));
+ *
+ * // Return 400 Bad Request with an error message
+ * return new JsonHttpResponse(400, Map.of("error", "prompt is required"));
  * }</pre>
  */
 public class JsonHttpResponse implements HttpResponse {
@@ -35,9 +36,8 @@ public class JsonHttpResponse implements HttpResponse {
     }
 
     /**
-     * 🚀 Writes the HTTP response.
-     * Sets the status code, content-type header, and serializes {@code value} as JSON
-     * directly into the response writer.
+     * 🚀 Writes the HTTP response. Sets the status code, content-type header, and serializes {@code
+     * value} as JSON directly into the response writer.
      */
     @Override
     public void generateResponse(StaplerRequest2 request, StaplerResponse2 response, Object node)
