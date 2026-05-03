@@ -21,18 +21,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * 🔐 Implements the GitHub OAuth 2.0 Device Authorization Flow.
  *
  * <h2>What is the Device Flow?</h2>
+ *
  * <p>The Device Flow is an OAuth 2.0 grant type designed for devices that cannot open a browser
  * (e.g. CLIs, TVs, IoT devices). The flow works in three steps:
+ *
  * <ol>
- *   <li>📲 <b>Start</b> — the server asks GitHub for a short user code and a verification URL.
- *       The user is told to visit the URL and type the code.</li>
+ *   <li>📲 <b>Start</b> — the server asks GitHub for a short user code and a verification URL. The
+ *       user is told to visit the URL and type the code.
  *   <li>🔄 <b>Poll</b> — while the user is authorizing, the server polls GitHub every few seconds
- *       asking "has the user approved yet?".</li>
- *   <li>✅ <b>Success</b> — once approved, GitHub returns an access token. The plugin stores it
- *       in {@link GitHubTokenStore} tied to the Jenkins user.</li>
+ *       asking "has the user approved yet?".
+ *   <li>✅ <b>Success</b> — once approved, GitHub returns an access token. The plugin stores it in
+ *       {@link GitHubTokenStore} tied to the Jenkins user.
  * </ol>
  *
  * <h2>State management</h2>
+ *
  * <p>In-flight logins are tracked in {@link #pendingLogins}, keyed by a random {@code loginId}
  * generated at step 1. This map is in-memory only; a Jenkins restart clears all pending logins.
  */
@@ -70,15 +73,16 @@ public class DeviceFlowAuthService {
      * 📲 Step 1 of the Device Flow: request a device code from GitHub.
      *
      * <p>This method:
+     *
      * <ol>
-     *   <li>Makes a POST to {@code /login/device/code} with the configured OAuth App client ID.</li>
-     *   <li>GitHub responds with a short user code, a verification URL, and a device code.</li>
-     *   <li>Stores the in-progress state in {@link #pendingLogins} under a random {@code loginId}.</li>
-     *   <li>Returns a {@link LoginStart} with everything the browser needs to show the login UI.</li>
+     *   <li>Makes a POST to {@code /login/device/code} with the configured OAuth App client ID.
+     *   <li>GitHub responds with a short user code, a verification URL, and a device code.
+     *   <li>Stores the in-progress state in {@link #pendingLogins} under a random {@code loginId}.
+     *   <li>Returns a {@link LoginStart} with everything the browser needs to show the login UI.
      * </ol>
      *
      * @throws IllegalStateException if the plugin is not configured (client ID missing)
-     * @throws IOException           if the HTTP request to GitHub fails
+     * @throws IOException if the HTTP request to GitHub fails
      */
     public LoginStart startLogin(User user, CopilotChatConfiguration configuration)
             throws IOException, InterruptedException {
@@ -132,13 +136,14 @@ public class DeviceFlowAuthService {
      *
      * <p>The browser calls this endpoint repeatedly (every {@code interval} seconds) after
      * displaying the user code. Possible outcomes:
+     *
      * <ul>
-     *   <li>⏳ {@code authorization_pending} / {@code slow_down} — user hasn't approved yet;
-     *       return a {@link LoginPollResult#pending pending} result with the suggested interval.</li>
-     *   <li>✅ Access token received — fetch the GitHub identity, store the token, and return
-     *       {@link LoginPollResult#authenticated authenticated}.</li>
-     *   <li>❌ Any other error (expired, denied, etc.) — remove the pending entry and return
-     *       {@link LoginPollResult#failed failed}.</li>
+     *   <li>⏳ {@code authorization_pending} / {@code slow_down} — user hasn't approved yet; return
+     *       a {@link LoginPollResult#pending pending} result with the suggested interval.
+     *   <li>✅ Access token received — fetch the GitHub identity, store the token, and return {@link
+     *       LoginPollResult#authenticated authenticated}.
+     *   <li>❌ Any other error (expired, denied, etc.) — remove the pending entry and return {@link
+     *       LoginPollResult#failed failed}.
      * </ul>
      */
     public LoginPollResult pollLogin(
@@ -206,9 +211,9 @@ public class DeviceFlowAuthService {
     }
 
     /**
-     * 👤 Calls {@code GET /user} to retrieve the authenticated user's GitHub profile.
-     * This is the final step after receiving an access token — it resolves the login name and
-     * numeric ID so they can be stored alongside the token.
+     * 👤 Calls {@code GET /user} to retrieve the authenticated user's GitHub profile. This is the
+     * final step after receiving an access token — it resolves the login name and numeric ID so
+     * they can be stored alongside the token.
      */
     private GitHubIdentity fetchIdentity(String accessToken)
             throws IOException, InterruptedException {
@@ -229,8 +234,8 @@ public class DeviceFlowAuthService {
     }
 
     /**
-     * ⚠️ Validates that the plugin is configured before making any OAuth request.
-     * Throws early with a meaningful message rather than failing later with a NullPointerException.
+     * ⚠️ Validates that the plugin is configured before making any OAuth request. Throws early with
+     * a meaningful message rather than failing later with a NullPointerException.
      */
     private static void requireClientId(CopilotChatConfiguration configuration) {
         if (configuration == null || !configuration.isConfigured()) {
@@ -239,8 +244,8 @@ public class DeviceFlowAuthService {
     }
 
     /**
-     * 🔍 Extracts a required text field from a JSON node.
-     * Throws {@link IOException} with a helpful message if the field is absent.
+     * 🔍 Extracts a required text field from a JSON node. Throws {@link IOException} with a helpful
+     * message if the field is absent.
      */
     private static String requiredText(JsonNode json, String field) throws IOException {
         String value = json.path(field).asText(null);
@@ -269,8 +274,8 @@ public class DeviceFlowAuthService {
     }
 
     /**
-     * 📄 Immutable value object holding the state of an in-progress Device Flow login.
-     * Stored in {@link #pendingLogins} between the start and completion of the flow.
+     * 📄 Immutable value object holding the state of an in-progress Device Flow login. Stored in
+     * {@link #pendingLogins} between the start and completion of the flow.
      */
     private record PendingLogin(
             String jenkinsUserId, String deviceCode, Instant expiresAt, int intervalSeconds) {}
