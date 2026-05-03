@@ -210,6 +210,7 @@
 
   async function logout() {
     await post('logout');
+    clearHistory();
     setLoggedOut();
     addMessage('system', 'Signed out');
   }

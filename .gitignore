@@ -13,7 +13,8 @@ npm-debug.log*
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 *.swp
 *.swo
 
