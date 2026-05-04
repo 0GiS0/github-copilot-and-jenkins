@@ -18,7 +18,7 @@ pipeline {
     parameters {
         choice(
             name: 'DOC_TYPE',
-            choices: ['README', 'SOURCE_COMMENTS', 'ALL'],
+            choices: ['ALL', 'README', 'SOURCE_COMMENTS'],
             description: 'Type of documentation update to generate'
         )
         string(
