@@ -41,7 +41,8 @@ pipeline {
                 echo 'Fetching Pull Request target branch...'
                 sh '''
                     set +x
-                    git -c "http.extraHeader=AUTHORIZATION: bearer ${GH_TOKEN}" fetch --no-tags origin "+refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
+                    AUTHENTICATED_REMOTE=$(git config --get remote.origin.url | sed "s#https://github.com/#https://x-access-token:${GH_TOKEN}@github.com/#")
+                    git fetch --no-tags "$AUTHENTICATED_REMOTE" "+refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
                 '''
             }
         }
