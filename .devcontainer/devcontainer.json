@@ -1,6 +1,6 @@
 {
   "name": "🤖 GitHub Copilot and 🔄 Jenkins Demo",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "forwardPorts": [
