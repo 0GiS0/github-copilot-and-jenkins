@@ -19,7 +19,7 @@ Delegate to the appropriate expert agent based on the task:
 ### ☕ Java Expert (`@java-expert`)
 **Invoke for:**
 - Java source code (`.java` files)
-- Java 17 features (records, sealed classes, pattern matching)
+- Java 25 features (records, sealed classes, pattern matching, virtual threads)
 - Maven/Gradle configuration for Java projects
 - JUnit testing
 - Design patterns and best practices

@@ -4,6 +4,10 @@ USER root
 
 # Install useful tools
 RUN apt-get update && apt-get install -y jq nodejs npm \
+    && npm install -g @github/copilot \
+    && npm cache clean --force \
+    && command -v copilot \
+    && copilot --version \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy plugins list and install plugins

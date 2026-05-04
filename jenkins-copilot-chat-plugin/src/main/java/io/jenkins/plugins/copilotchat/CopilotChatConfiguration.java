@@ -16,9 +16,7 @@ import org.kohsuke.stapler.DataBoundSetter;
  *
  * <ul>
  *   <li>🔑 {@code clientId} — GitHub OAuth App client ID used during the Device Flow login.
- *   <li>🌐 {@code cliUrl} — URL of the remote Copilot CLI server (e.g. {@code
- *       http://copilot-cli:3003}). When set, the plugin forwards requests to this server instead of
- *       spawning a local CLI process.
+ *   <li>📂 {@code cliPath} — Optional local filesystem path to the Copilot CLI binary.
  *   <li>🤖 {@code defaultModel} — The AI model used for new chat sessions (e.g. {@code gpt-5.4}).
  *   <li>🔧 {@code availableTools} — Comma-separated list of MCP tool names the AI is allowed to
  *       invoke. Leave blank to allow all tools.
@@ -36,7 +34,6 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     // 🔑 GitHub OAuth App client ID (registered at github.com/settings/developers)
     private String clientId;
     private String cliPath;
-    private String cliUrl = "http://copilot-cli:3003";
     private String defaultModel = DEFAULT_MODEL;
     private String availableTools = "";
     private int requestTimeoutSeconds = 120;
@@ -75,10 +72,7 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
         save();
     }
 
-    /**
-     * 📂 Returns the local filesystem path to the Copilot CLI binary. Only used when {@link
-     * #getCliUrl()} is not set (local mode).
-     */
+    /** 📂 Returns the optional local filesystem path to the Copilot CLI binary. */
     @CheckForNull
     public String getCliPath() {
         return cliPath;
@@ -88,23 +82,6 @@ public class CopilotChatConfiguration extends GlobalConfiguration {
     @DataBoundSetter
     public void setCliPath(String cliPath) {
         this.cliPath = normalize(cliPath);
-        save();
-    }
-
-    /**
-     * 🌐 Returns the URL of the remote Copilot CLI server. When this is set the plugin communicates
-     * with the CLI over HTTP instead of spawning a local process, which is the recommended setup
-     * inside Docker/Kubernetes.
-     */
-    @CheckForNull
-    public String getCliUrl() {
-        return cliUrl;
-    }
-
-    /** 🌐 Sets the CLI server URL and persists the configuration. */
-    @DataBoundSetter
-    public void setCliUrl(String cliUrl) {
-        this.cliUrl = normalize(cliUrl);
         save();
     }
 

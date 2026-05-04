@@ -72,8 +72,7 @@ Result: the chat bubble appears on all Jenkins pages without changing any core J
 | Field | Purpose |
 |-------|---------|
 | `clientId` | GitHub OAuth App client ID for Device Flow |
-| `cliUrl` | URL of the remote Copilot CLI HTTP server |
-| `cliPath` | Path to a local Copilot CLI binary (alternative) |
+| `cliPath` | Optional path to a local Copilot CLI binary |
 | `defaultModel` | AI model to use (e.g. `gpt-5.4`) |
 | `availableTools` | Comma-separated MCP tools the AI may call |
 | `requestTimeoutSeconds` | Streaming timeout |
@@ -154,8 +153,8 @@ private record UserChatSession(
 Sessions are cached in a `ConcurrentHashMap<String, UserChatSession>` keyed by Jenkins user ID.
 
 **Session creation steps:**
-1. `CopilotClientFactory` creates a `CopilotClient` (either pointing at the remote CLI server or a local binary).
-2. `client.start()` starts the CLI process / connects to the remote server.
+1. `CopilotClientFactory` creates a `CopilotClient` with the authenticated user's GitHub token and, optionally, a local binary path.
+2. `client.start()` starts the local CLI process.
 3. `client.createSession(config)` opens an AI conversation with:
    - The chosen model
    - Streaming enabled
@@ -230,16 +229,15 @@ to avoid memory leaks from lingering subscriptions.
 
 ---
 
-## 🔌 Copilot SDK Client Modes
+## 🔌 Copilot SDK Client
 
-`CopilotClientFactory` supports two deployment modes:
+`CopilotClientFactory` creates clients authenticated with the GitHub token stored for each Jenkins user.
 
-| Mode | When to use | How it works |
-|------|------------|-------------|
-| **Remote CLI server** | Docker / Kubernetes | Set `cliUrl`. The SDK sends HTTP requests to a running `copilot-cli` container. No GitHub token needed on the Jenkins side. |
-| **Local CLI** | Development / bare metal | Leave `cliUrl` blank. The SDK spawns a local `copilot` CLI process using the user's GitHub token. Optionally set `cliPath` for a specific binary. |
+| Configuration | How it works |
+|---------------|-------------|
+| **Local CLI** | The SDK spawns a local `copilot` CLI process using the user's GitHub token. Optionally set `cliPath` for a specific binary. |
 
-The recommended setup (used in the Dev Container) is the remote CLI server mode — the `copilot-cli` service in `docker-compose.yml` handles all Copilot authentication and model access.
+Remote CLI server mode is no longer supported; the plugin always uses the authenticated Jenkins user's GitHub identity.
 
 ---
 
