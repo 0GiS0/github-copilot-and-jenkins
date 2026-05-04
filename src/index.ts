@@ -29,6 +29,10 @@ function sendJson(response: ServerResponse, statusCode: number, payload: unknown
   response.end(JSON.stringify(payload));
 }
 
+/**
+ * Serves a static frontend asset for the given path.
+ * Returns `true` if the asset was found and written, `false` otherwise.
+ */
 async function sendFrontendAsset(path: string, response: ServerResponse): Promise<boolean> {
   const asset = frontendAssets[path];
 

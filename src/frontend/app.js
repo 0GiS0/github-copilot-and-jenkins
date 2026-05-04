@@ -14,6 +14,11 @@ const orderForm = document.querySelector('#orderForm');
 const toast = document.querySelector('#toast');
 const apiStatus = document.querySelector('#apiStatus');
 
+/**
+ * Displays a brief toast notification with the given message.
+ * The toast auto-hides after 2.8 seconds.
+ * @param {string} message - Text to display.
+ */
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add('is-visible');
@@ -21,6 +26,11 @@ function showToast(message) {
   showToast.timeoutId = window.setTimeout(() => toast.classList.remove('is-visible'), 2800);
 }
 
+/**
+ * Escapes HTML special characters in a value to prevent XSS.
+ * @param {*} value - Value to escape.
+ * @returns {string} HTML-safe string.
+ */
 function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, character => ({
     '&': '&amp;',
@@ -30,6 +40,13 @@ function escapeHtml(value) {
   })[character]);
 }
 
+/**
+ * Sends a JSON fetch request and returns the parsed response payload.
+ * Throws an error when the response status is not OK.
+ * @param {string} url - Request URL.
+ * @param {RequestInit} [options] - Additional fetch options.
+ * @returns {Promise<any>} Parsed JSON payload.
+ */
 async function requestJson(url, options) {
   const response = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
@@ -44,12 +61,20 @@ async function requestJson(url, options) {
   return payload;
 }
 
+/**
+ * Updates the API status indicator in the UI.
+ * @param {boolean} isOk - Whether the API is reachable.
+ */
 function updateApiStatus(isOk) {
   apiStatus.textContent = isOk ? 'API conectada' : 'API no disponible';
   apiStatus.classList.toggle('is-ok', isOk);
   apiStatus.classList.toggle('is-error', !isOk);
 }
 
+/**
+ * Calculates the total price of all items currently in the cart.
+ * @returns {number} Cart total in dollars.
+ */
 function getCartTotal() {
   return [...state.cart.entries()].reduce((total, [productId, quantity]) => {
     const product = state.products.find(candidate => candidate.id === productId);
@@ -57,6 +82,10 @@ function getCartTotal() {
   }, 0);
 }
 
+/**
+ * Renders the product catalogue from `state.products` into the product list element.
+ * Each card includes a quantity input and an "add to cart" button.
+ */
 function renderProducts() {
   productList.innerHTML = '';
 
@@ -88,6 +117,10 @@ function renderProducts() {
   });
 }
 
+/**
+ * Renders the current cart contents and updates the cart total display.
+ * Shows an empty-state message when the cart has no items.
+ */
 function renderCart() {
   cartItems.innerHTML = '';
 
@@ -120,6 +153,10 @@ function renderCart() {
   cartTotal.textContent = money.format(getCartTotal());
 }
 
+/**
+ * Renders the orders list from `state.orders`.
+ * Each card includes a status selector and a cancel button.
+ */
 function renderOrders() {
   ordersList.innerHTML = '';
 
@@ -160,6 +197,10 @@ function renderOrders() {
   });
 }
 
+/**
+ * Fetches health, products, and orders from the API in parallel, then re-renders the UI.
+ * Updates the API status indicator on success or failure.
+ */
 async function loadData() {
   try {
     const [health, productsPayload, ordersPayload] = await Promise.all([
@@ -179,6 +220,11 @@ async function loadData() {
   }
 }
 
+/**
+ * Sends a PATCH request to update the status of an order, then reloads the data.
+ * @param {string} orderId - ID of the order to update.
+ * @param {string} status - New status value.
+ */
 async function updateStatus(orderId, status) {
   try {
     await requestJson(`/orders/${orderId}/status`, {
@@ -192,6 +238,10 @@ async function updateStatus(orderId, status) {
   }
 }
 
+/**
+ * Sends a DELETE request to cancel an order, then reloads the data.
+ * @param {string} orderId - ID of the order to cancel.
+ */
 async function deleteOrder(orderId) {
   try {
     await requestJson(`/orders/${orderId}`, { method: 'DELETE' });
