@@ -9,6 +9,7 @@ def repositoryOwner = '0GiS0'
 def repositoryName = 'github-copilot-and-jenkins'
 def codeReviewJobName = 'copilot-demos/code-review'
 def docsGeneratorJobName = 'copilot-demos/docs-generator'
+def sampleCiJobName = 'copilot-demos/sample-app-ci'
 
 def jobDsl = """
 folder('copilot-demos') {
@@ -45,7 +46,7 @@ multibranchPipelineJob('${codeReviewJobName}') {
     }
     triggers {
         periodicFolderTrigger {
-            interval('1h')
+            interval('1m')
         }
     }
     orphanedItemStrategy {
@@ -84,7 +85,7 @@ multibranchPipelineJob('${docsGeneratorJobName}') {
     }
     triggers {
         periodicFolderTrigger {
-            interval('1h')
+            interval('1m')
         }
     }
     orphanedItemStrategy {
@@ -109,6 +110,25 @@ pipelineJob('copilot-demos/code-analysis') {
                 }
             }
             scriptPath('pipelines/code-analysis.jenkinsfile')
+        }
+    }
+}
+
+pipelineJob('${sampleCiJobName}') {
+    displayName('🧪 Sample App CI')
+    description('Run CI for the sample Node.js REST API')
+    definition {
+        cpsScm {
+            scm {
+                git {
+                    remote {
+                        url('${repositoryUrl}')
+                        credentials('${gitCredentialsId}')
+                    }
+                    branches('*/main')
+                }
+            }
+            scriptPath('src/Jenkinsfile')
         }
     }
 }
