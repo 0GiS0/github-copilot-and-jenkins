@@ -152,6 +152,9 @@ export function validateAllowedChanges(state) {
     const files = changedFiles();
     writeFileSync(`${reportsDir}/modified-files.txt`, files.length ? `${files.join('\n')}\n` : '');
     for (const file of files) {
+        if (file === 'docs/PR_DOCUMENTATION.md') {
+            throw new Error('Copilot created docs/PR_DOCUMENTATION.md, which is not allowed for PR write-back.');
+        }
         if (file.startsWith('docs/')) {
             if (allowMarkdownDocs) {
                 continue;
