@@ -1,156 +1,122 @@
 pipeline {
     agent any
-    
+
     options {
         ansiColor('xterm')
         timestamps()
         timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds(abortPrevious: true)
     }
-    
+
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
+        COPILOT_MODEL = 'claude-sonnet-4.6'
         PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
-    
+
     parameters {
         choice(
             name: 'DOC_TYPE',
-            choices: ['README', 'API', 'ALL'],
-            description: 'Type of documentation to generate'
+            choices: ['ALL', 'README', 'SOURCE_COMMENTS'],
+            description: 'Type of documentation update to generate'
+        )
+        string(
+            name: 'PR_NUMBER',
+            defaultValue: '',
+            description: 'Optional GitHub PR number. Uses CHANGE_ID automatically in multibranch PR builds.'
+        )
+        booleanParam(
+            name: 'WRITE_BACK_TO_PR',
+            defaultValue: true,
+            description: 'Commit generated documentation back to the existing PR branch when it is safe.'
         )
     }
-    
+
     stages {
         stage('🔧 Setup') {
             steps {
-                echo '📦 Checking GitHub Copilot CLI installation...'
-                sh '''
-                    if ! command -v copilot >/dev/null 2>&1; then
-                        echo "Installing GitHub Copilot CLI..."
-                        curl -fsSL https://gh.io/copilot-install | PREFIX="$HOME/.local" bash
-                    fi
+                echo 'Checking GitHub Copilot CLI installation...'
+                sh 'sh scripts/common/setup-copilot.sh reports'
+            }
+        }
 
-                    copilot --version
-                    echo "✅ GitHub Copilot CLI is ready"
-                '''
-            }
-        }
-        
-        stage('📂 Analyze Project') {
+        stage('🔎 PR Context') {
             steps {
-                echo '🔍 Analyzing project structure...'
-                sh '''
-                    mkdir -p docs
-                    
-                    # Collect project information
-                    echo "Project Structure:" > project_info.txt
-                    find . -type f -name "*.ts" -o -name "*.js" | grep -v node_modules | head -30 >> project_info.txt
-                    echo "" >> project_info.txt
-                    
-                    echo "Package Info:" >> project_info.txt
-                    cat package.json >> project_info.txt 2>/dev/null || echo "No package.json found"
-                    
-                    echo "Project info collected"
-                '''
+                echo 'Detecting PR context, author permission, and documentation candidates...'
+                sh 'node scripts/docs-generator/prepare.mjs'
             }
         }
-        
-        stage('📚 Generate README') {
+
+        stage('📚 README') {
             when {
                 expression { params.DOC_TYPE == 'README' || params.DOC_TYPE == 'ALL' }
             }
             steps {
-                echo '🤖 Generating README with Copilot...'
-                sh '''
-                    echo "Generating README documentation..."
-                    
-                    # Extract key information from project
-                    PROJECT_NAME=$(cat package.json | jq -r '.name' 2>/dev/null || echo "Project")
-                    PROJECT_DESC=$(cat package.json | jq -r '.description' 2>/dev/null || echo "A demo project")
-                    
-                    # Ask Copilot to help generate documentation
-                    echo "# Generated Documentation" > docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    echo "## Project: $PROJECT_NAME" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    echo "$PROJECT_DESC" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    
-                    # Use Copilot to generate installation instructions
-                    echo "### Installation" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Generate concise npm installation instructions for this TypeScript project. Return Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
-                        echo '```bash' >> docs/GENERATED_README.md
-                        echo 'npm install' >> docs/GENERATED_README.md
-                        echo 'npm run build' >> docs/GENERATED_README.md
-                        echo '```' >> docs/GENERATED_README.md
-                    }
-                    echo "" >> docs/GENERATED_README.md
-                    
-                    # Use Copilot to explain project usage
-                    echo "### Usage" >> docs/GENERATED_README.md
-                    echo "" >> docs/GENERATED_README.md
-                    copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Explain how to run this TypeScript Node.js project based on package.json. Return concise Markdown only. Do not modify files." 2>&1 | head -50 >> docs/GENERATED_README.md || {
-                        echo '```bash' >> docs/GENERATED_README.md
-                        echo 'npm run dev' >> docs/GENERATED_README.md
-                        echo '```' >> docs/GENERATED_README.md
-                    }
-                    
-                    echo "✅ README generated"
-                '''
+                echo 'Generating PR-aware README documentation with Copilot...'
+                sh 'node scripts/docs-generator/generate-readme.mjs'
             }
         }
-        
-        stage('📖 Generate API Docs') {
+
+        stage('💬 Source Comments') {
             when {
-                expression { params.DOC_TYPE == 'API' || params.DOC_TYPE == 'ALL' }
+                expression { params.DOC_TYPE == 'SOURCE_COMMENTS' || params.DOC_TYPE == 'ALL' }
             }
             steps {
-                echo '🤖 Generating API documentation with Copilot...'
-                sh '''
-                    echo "Generating API documentation..."
-                    
-                    echo "# API Documentation" > docs/API.md
-                    echo "" >> docs/API.md
-                    echo "Generated: $(date)" >> docs/API.md
-                    echo "" >> docs/API.md
-                    
-                    # Document each TypeScript file
-                    for file in $(find src -name "*.ts" -type f | grep -v test | head -10); do
-                        echo "## $(basename $file)" >> docs/API.md
-                        echo "" >> docs/API.md
-                        echo "### Functions" >> docs/API.md
-                        echo "" >> docs/API.md
-                        
-                        # Extract function signatures and ask Copilot to document
-                        grep -E "^export (async )?function" "$file" | while read -r func; do
-                            echo "#### $func" >> docs/API.md
-                            echo "" >> docs/API.md
-                            copilot --autopilot --yolo --max-autopilot-continues 3 --prompt "Document this TypeScript function signature in concise Markdown. Include purpose, parameters, and return value when inferable: $func" 2>&1 | head -40 >> docs/API.md || echo "Function documentation" >> docs/API.md
-                            echo "" >> docs/API.md
-                        done
-                        
-                        echo "---" >> docs/API.md
-                        echo "" >> docs/API.md
-                    done
-                    
-                    echo "✅ API documentation generated"
-                '''
+                echo 'Generating PR-aware source documentation comments with Copilot...'
+                sh 'node scripts/docs-generator/generate-source-comments.mjs'
+            }
+        }
+
+        stage('✅ Validate') {
+            steps {
+                echo 'Validating generated documentation changes...'
+                sh 'node scripts/docs-generator/validate-changes.mjs'
+            }
+        }
+
+        stage('⬆️ Write Back') {
+            when {
+                expression { params.WRITE_BACK_TO_PR }
+            }
+            steps {
+                echo 'Committing generated documentation back to the PR branch when safe...'
+                sh 'node scripts/docs-generator/write-back.mjs'
+            }
+        }
+
+        stage('📣 PR Comment') {
+            steps {
+                echo 'Posting documentation generator summary to the PR...'
+                sh 'node scripts/docs-generator/comment-pr.mjs'
             }
         }
     }
-    
+
     post {
         always {
-            echo '📁 Archiving documentation...'
-            archiveArtifacts artifacts: 'docs/*.md', allowEmptyArchive: true
+            echo 'Archiving documentation and report...'
+            script {
+                if (fileExists('reports/docs-generator.md')) {
+                    def report = load 'scripts/common/md-to-html-report.groovy'
+                    report.convert('reports/docs-generator.md', 'reports/docs-generator.html', 'Documentation Generator Report')
+                }
+            }
+            archiveArtifacts artifacts: 'docs/*.md, reports/*.md, reports/*.txt, reports/*.html, reports/*.css, reports/*.json', allowEmptyArchive: true
+            publishHTML(target: [
+                reportDir: 'reports',
+                reportFiles: 'docs-generator.html',
+                reportName: 'Copilot Documentation Generator Report',
+                keepAll: true,
+                alwaysLinkToLastBuild: true,
+                allowMissing: true
+            ])
         }
         success {
-            echo '✅ Documentation generation completed successfully!'
+            echo 'Documentation generation completed successfully!'
         }
         failure {
-            echo '❌ Documentation generation failed!'
+            echo 'Documentation generation failed!'
         }
     }
 }

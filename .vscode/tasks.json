@@ -1,0 +1,58 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Abrir repo en GitHub (web)",
+            "type": "shell",
+            "command": "gh",
+            "args": [
+                "repo",
+                "view",
+                "--web"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "detail": "Usa `gh repo view --web` para abrir el repositorio en el navegador."
+        },
+        {
+            "label": "Plugin: Build e instalar en Jenkins",
+            "type": "shell",
+            "command": "find ~/.m2/repository -name '*.lastUpdated' -delete 2>/dev/null && cd jenkins-copilot-chat-plugin && rm -rf target && mvn clean package install -Dmaven.test.skip=true && rm -rf /var/jenkins_home/plugins/copilot-chat /var/jenkins_home/plugins/copilot-chat.jpi /var/jenkins_home/plugins/copilot-chat.jpi.pinned /var/jenkins_home/plugins/copilot-chat.hpi && HPI=$(find target -maxdepth 1 -name '*.hpi' -type f | head -1) && cp \"$HPI\" /var/jenkins_home/plugins/copilot-chat.jpi && echo '✅ Plugin compilado y copiado a Jenkins. Reinicia Jenkins para aplicar.'",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            },
+            "detail": "Compila el plugin y lo copia al directorio de plugins de Jenkins vía volumen compartido."
+        },
+        {
+            "label": "Jenkins: Reiniciar (safe restart)",
+            "type": "shell",
+            "command": "COOKIE=$(mktemp) && CRUMB=$(curl -s -c \"$COOKIE\" -u admin:admin http://jenkins:8080/crumbIssuer/api/json | node -e \"process.stdin.on('data',d=>{const j=JSON.parse(d);process.stdout.write(j.crumb)})\") && curl -s -b \"$COOKIE\" -u admin:admin -H \"Jenkins-Crumb: $CRUMB\" -X POST http://jenkins:8080/safeRestart && rm -f \"$COOKIE\" && echo '♻️  Jenkins reiniciándose...'",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true
+            },
+            "detail": "Ejecuta un safeRestart en Jenkins (espera a que terminen los builds activos)."
+        },
+        {
+            "label": "Plugin: Build, instalar y reiniciar Jenkins",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Plugin: Build e instalar en Jenkins",
+                "Jenkins: Reiniciar (safe restart)"
+            ],
+            "group": "build",
+            "detail": "Todo en uno: compila el plugin, lo copia a Jenkins y reinicia."
+        }
+    ]
+}

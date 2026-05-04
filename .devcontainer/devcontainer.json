@@ -1,6 +1,6 @@
 {
-  "name": "🤖 GitHub Copilot and 👨🏻 Jenkins Demo",
-  "dockerComposeFile": "docker-compose.yml",
+  "name": "🤖 GitHub Copilot and 🔄 Jenkins Demo",
+  "dockerComposeFile": "compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "forwardPorts": [
@@ -20,14 +20,15 @@
         "ms-azuretools.vscode-docker",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "GitHub.copilot"
+        "GitHub.copilot",
+        "vscjava.vscode-java-pack"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
   },
-  "postCreateCommand": "npm install && chmod +x scripts/*.sh",
+  "postCreateCommand": "npm install && chmod +x scripts/*.sh && scripts/setup-git-credential-helper.sh",
   "postStartCommand": "scripts/sync-jenkins-gh-token.sh || true",
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}"
@@ -35,7 +36,14 @@
   "features": {
     "ghcr.io/devcontainers/features/github-cli:1": {},
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "22"
-    }
+      "nodeGypDependencies": true,
+      "version": "lts",
+      "pnpmVersion": "latest",
+      "nvmVersion": "latest"
+    },
+    "ghcr.io/devcontainers-extra/features/maven-sdkman:2": {},
+    "ghcr.io/devcontainers-extra/features/jenkinsx-cli:1": {},
+    "ghcr.io/devcontainers/features/node:2": {},
+    "ghcr.io/devcontainers-extra/features/groovy-sdkman:2": {}
   }
 }

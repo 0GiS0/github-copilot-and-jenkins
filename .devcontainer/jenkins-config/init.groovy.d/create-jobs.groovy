@@ -5,6 +5,8 @@ import hudson.model.*
 
 def repositoryUrl = 'https://github.com/0GiS0/github-copilot-and-jenkins.git'
 def gitCredentialsId = 'github-token'
+def repositoryOwner = '0GiS0'
+def repositoryName = 'github-copilot-and-jenkins'
 
 def jobDsl = """
 folder('copilot-demos') {
@@ -12,40 +14,80 @@ folder('copilot-demos') {
     description('Pipelines demonstrating GitHub Copilot CLI integration')
 }
 
-pipelineJob('copilot-demos/code-review') {
+multibranchPipelineJob('copilot-demos/code-review') {
     displayName('Code Review with Copilot')
-    description('Automated code review using GitHub Copilot CLI')
-    definition {
-        cpsScm {
-            scm {
-                git {
-                    remote {
-                        url('${repositoryUrl}')
-                        credentials('${gitCredentialsId}')
+    description('Automated Pull Request code review using GitHub Copilot CLI')
+    branchSources {
+        branchSource {
+            source {
+                github {
+                    id('copilot-demos-code-review')
+                    credentialsId('${gitCredentialsId}')
+                    repositoryUrl('${repositoryUrl}')
+                    configuredByUrl(false)
+                    repoOwner('${repositoryOwner}')
+                    repository('${repositoryName}')
+                    traits {
+                        gitHubPullRequestDiscovery {
+                            strategyId(1)
+                        }
                     }
-                    branches('*/main')
                 }
             }
+        }
+    }
+    factory {
+        workflowBranchProjectFactory {
             scriptPath('pipelines/code-review.jenkinsfile')
+        }
+    }
+    triggers {
+        periodicFolderTrigger {
+            interval('1m')
+        }
+    }
+    orphanedItemStrategy {
+        discardOldItems {
+            numToKeep(20)
         }
     }
 }
 
-pipelineJob('copilot-demos/docs-generator') {
+multibranchPipelineJob('copilot-demos/docs-generator') {
     displayName('Documentation Generator')
-    description('Generate documentation using GitHub Copilot CLI')
-    definition {
-        cpsScm {
-            scm {
-                git {
-                    remote {
-                        url('${repositoryUrl}')
-                        credentials('${gitCredentialsId}')
+    description('Generate and write back Pull Request documentation using GitHub Copilot CLI')
+    branchSources {
+        branchSource {
+            source {
+                github {
+                    id('copilot-demos-docs-generator')
+                    credentialsId('${gitCredentialsId}')
+                    repositoryUrl('${repositoryUrl}')
+                    configuredByUrl(false)
+                    repoOwner('${repositoryOwner}')
+                    repository('${repositoryName}')
+                    traits {
+                        gitHubPullRequestDiscovery {
+                            strategyId(1)
+                        }
                     }
-                    branches('*/main')
                 }
             }
+        }
+    }
+    factory {
+        workflowBranchProjectFactory {
             scriptPath('pipelines/docs-generator.jenkinsfile')
+        }
+    }
+    triggers {
+        periodicFolderTrigger {
+            interval('1m')
+        }
+    }
+    orphanedItemStrategy {
+        discardOldItems {
+            numToKeep(20)
         }
     }
 }
@@ -69,9 +111,9 @@ pipelineJob('copilot-demos/code-analysis') {
     }
 }
 
-pipelineJob('main-pipeline') {
-    displayName('Main Pipeline - All Demos')
-    description('Run all Copilot CLI demonstrations')
+pipelineJob('sample-app-ci') {
+    displayName('🧪 Sample App CI')
+    description('Run CI for the sample Node.js REST API')
     definition {
         cpsScm {
             scm {
@@ -83,10 +125,11 @@ pipelineJob('main-pipeline') {
                     branches('*/main')
                 }
             }
-            scriptPath('Jenkinsfile')
+            scriptPath('src/Jenkinsfile')
         }
     }
 }
+
 """
 
 def jenkins = Jenkins.instance

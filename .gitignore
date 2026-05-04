@@ -9,10 +9,12 @@ npm-debug.log*
 .env
 .env.local
 *.local
+.devcontainer/.env
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 *.swp
 *.swo
 

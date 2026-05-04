@@ -3,6 +3,7 @@ job-dsl
 workflow-aggregator
 git
 github
+github-branch-source
 credentials-binding
 pipeline-utility-steps
 pipeline-stage-view
@@ -10,3 +11,4 @@ ansicolor
 timestamper
 ws-cleanup
 htmlpublisher
+mcp-server
