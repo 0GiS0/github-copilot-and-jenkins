@@ -28,7 +28,7 @@
       }
     }
   },
-  "postCreateCommand": "npm install && chmod +x scripts/*.sh",
+  "postCreateCommand": "npm install && chmod +x scripts/*.sh && scripts/setup-git-credential-helper.sh",
   "postStartCommand": "scripts/sync-jenkins-gh-token.sh || true",
   "remoteEnv": {
     "GH_TOKEN": "${localEnv:GH_TOKEN}"
