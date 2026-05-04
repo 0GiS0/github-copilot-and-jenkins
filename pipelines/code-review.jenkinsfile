@@ -15,10 +15,33 @@ pipeline {
     }
 
     stages {
+        stage('🔎 PR Context') {
+            steps {
+                script {
+                    if (!env.CHANGE_ID || !env.CHANGE_TARGET) {
+                        error 'This pipeline must run from a Pull Request build in a Multibranch Pipeline.'
+                    }
+
+                    echo "Reviewing PR #${env.CHANGE_ID}"
+                    echo "Source branch: ${env.CHANGE_BRANCH}"
+                    echo "Target branch: ${env.CHANGE_TARGET}"
+                }
+            }
+        }
+
         stage('🔧 Setup') {
             steps {
                 echo 'Checking GitHub Copilot CLI installation...'
                 sh 'sh scripts/common/setup-copilot.sh reports'
+            }
+        }
+
+        stage('📥 Fetch Base Branch') {
+            steps {
+                echo 'Fetching Pull Request target branch...'
+                sh '''
+                    git fetch --no-tags origin "+refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
+                '''
             }
         }
 
@@ -42,6 +65,13 @@ pipeline {
                 sh 'node scripts/code-review/summary.mjs'
             }
         }
+
+        stage('💬 PR Comment') {
+            steps {
+                echo 'Publishing code review comment on Pull Request...'
+                sh 'node scripts/code-review/comment-pr.mjs'
+            }
+        }
     }
 
     post {
@@ -53,7 +83,7 @@ pipeline {
                     report.convert('reports/code-review.md', 'reports/code-review.html', 'Code Review Report')
                 }
             }
-            archiveArtifacts artifacts: 'reports/*.md, reports/*.txt, reports/*.html, reports/*.css', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'reports/*.md, reports/*.txt, reports/*.html, reports/*.css, reports/*.json', allowEmptyArchive: true
             publishHTML(target: [
                 reportDir: 'reports',
                 reportFiles: 'code-review.html',
