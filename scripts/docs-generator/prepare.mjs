@@ -83,7 +83,7 @@ if (!canWrite) {
 
 configureAuthenticatedRemote(repo.owner, repo.name);
 runInherited('git', ['fetch', 'origin', prState.headBranch]);
-runInherited('git', ['checkout', '-B', prState.headBranch, `origin/${prState.headBranch}`]);
+runInherited('git', ['checkout', '-B', prState.headBranch, 'FETCH_HEAD']);
 
 if (latestCommitRequestsSkip()) {
     state = { ...state, skip: true, reason: 'Skipped because the PR head commit contains [skip docs-generator].' };
