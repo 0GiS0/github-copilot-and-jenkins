@@ -7,9 +7,6 @@ def repositoryUrl = 'https://github.com/0GiS0/github-copilot-and-jenkins.git'
 def gitCredentialsId = 'github-token'
 def repositoryOwner = '0GiS0'
 def repositoryName = 'github-copilot-and-jenkins'
-def codeReviewJobName = 'copilot-demos/code-review'
-def docsGeneratorJobName = 'copilot-demos/docs-generator'
-def sampleCiJobName = 'copilot-demos/sample-app-ci'
 
 def jobDsl = """
 folder('copilot-demos') {
@@ -17,7 +14,7 @@ folder('copilot-demos') {
     description('Pipelines demonstrating GitHub Copilot CLI integration')
 }
 
-multibranchPipelineJob('${codeReviewJobName}') {
+multibranchPipelineJob('copilot-demos/code-review') {
     displayName('Code Review with Copilot')
     description('Automated Pull Request code review using GitHub Copilot CLI')
     branchSources {
@@ -56,7 +53,7 @@ multibranchPipelineJob('${codeReviewJobName}') {
     }
 }
 
-multibranchPipelineJob('${docsGeneratorJobName}') {
+multibranchPipelineJob('copilot-demos/docs-generator') {
     displayName('Documentation Generator')
     description('Generate and write back Pull Request documentation using GitHub Copilot CLI')
     branchSources {
@@ -114,7 +111,7 @@ pipelineJob('copilot-demos/code-analysis') {
     }
 }
 
-pipelineJob('${sampleCiJobName}') {
+pipelineJob('sample-app-ci') {
     displayName('🧪 Sample App CI')
     description('Run CI for the sample Node.js REST API')
     definition {
@@ -136,15 +133,6 @@ pipelineJob('${sampleCiJobName}') {
 """
 
 def jenkins = Jenkins.instance
-def existingCodeReviewJob = jenkins.getItemByFullName(codeReviewJobName)
-if (existingCodeReviewJob && existingCodeReviewJob.class.name != 'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject') {
-    existingCodeReviewJob.delete()
-}
-def existingDocsGeneratorJob = jenkins.getItemByFullName(docsGeneratorJobName)
-if (existingDocsGeneratorJob && existingDocsGeneratorJob.class.name != 'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject') {
-    existingDocsGeneratorJob.delete()
-}
-
 def workspace = new File(System.getProperty("java.io.tmpdir"), "jobdsl-workspace")
 workspace.mkdirs()
 
