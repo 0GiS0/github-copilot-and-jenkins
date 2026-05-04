@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "postbuild": "cp -R src/frontend dist/frontend",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "test": "jest",
