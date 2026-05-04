@@ -12,11 +12,18 @@ import {
 
 const port = Number(process.env.PORT || 3000);
 
+/**
+ * Writes a JSON response with the given HTTP status code.
+ */
 function sendJson(response: ServerResponse, statusCode: number, payload: unknown): void {
   response.writeHead(statusCode, { 'Content-Type': 'application/json' });
   response.end(JSON.stringify(payload));
 }
 
+/**
+ * Reads the full request body and parses it as JSON.
+ * Returns an empty object when the body is absent.
+ */
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
 
@@ -28,6 +35,10 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   return rawBody ? JSON.parse(rawBody) : {};
 }
 
+/**
+ * Routes an incoming HTTP request to the appropriate handler and writes the JSON response.
+ * Responds with 400 on any thrown error and 404 when no route matches.
+ */
 async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
   const method = request.method || 'GET';
   const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
@@ -82,6 +93,7 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   }
 }
 
+/** HTTP server instance for the Order API. */
 export const server = createServer((request, response) => {
   void handleRequest(request, response);
 });

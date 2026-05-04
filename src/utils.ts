@@ -1,5 +1,7 @@
+/** Lifecycle states an order can occupy. */
 export type OrderStatus = 'pending' | 'paid' | 'packed' | 'shipped' | 'cancelled';
 
+/** A product available for purchase. */
 export interface Product {
   id: string;
   name: string;
@@ -7,17 +9,20 @@ export interface Product {
   stock: number;
 }
 
+/** A single line item as supplied by the caller when creating an order. */
 export interface OrderItemInput {
   productId: string;
   quantity: number;
 }
 
+/** Payload required to create a new order. */
 export interface CreateOrderInput {
   customerName: string;
   customerEmail: string;
   items: OrderItemInput[];
 }
 
+/** A resolved line item stored on an order. */
 export interface OrderItem {
   productId: string;
   name: string;
@@ -26,6 +31,7 @@ export interface OrderItem {
   subtotal: number;
 }
 
+/** A complete order record. */
 export interface Order {
   id: string;
   customerName: string;
@@ -44,19 +50,29 @@ const products: Product[] = [
 
 const orders: Order[] = [];
 
+/** Returns a shallow copy of every available product. */
 export function listProducts(): Product[] {
   return products.map(product => ({ ...product }));
 }
 
+/** Returns a deep copy of all orders. */
 export function listOrders(): Order[] {
   return orders.map(order => ({ ...order, items: order.items.map(item => ({ ...item })) }));
 }
 
+/**
+ * Finds an order by its ID.
+ * @returns A deep copy of the order, or `undefined` if not found.
+ */
 export function findOrder(id: string): Order | undefined {
   const order = orders.find(candidate => candidate.id === id);
   return order ? { ...order, items: order.items.map(item => ({ ...item })) } : undefined;
 }
 
+/**
+ * Creates and persists a new order from an untyped request payload.
+ * @throws {Error} If required fields are missing, the email is invalid, no items are provided, or a product ID is unknown.
+ */
 export function createOrder(payload: unknown): Order {
   const input = payload as CreateOrderInput;
 
@@ -98,6 +114,11 @@ export function createOrder(payload: unknown): Order {
   return { ...order, items: order.items.map(item => ({ ...item })) };
 }
 
+/**
+ * Updates the status of an existing order.
+ * @returns A deep copy of the updated order, or `undefined` if the order was not found.
+ * @throws {Error} If `status` is not a valid `OrderStatus` value.
+ */
 export function updateOrderStatus(id: string, status: OrderStatus): Order | undefined {
   const allowedStatuses: OrderStatus[] = ['pending', 'paid', 'packed', 'shipped', 'cancelled'];
   const order = orders.find(candidate => candidate.id === id);
@@ -114,6 +135,10 @@ export function updateOrderStatus(id: string, status: OrderStatus): Order | unde
   return { ...order, items: order.items.map(item => ({ ...item })) };
 }
 
+/**
+ * Removes an order from the store.
+ * @returns `true` if the order was found and deleted, `false` otherwise.
+ */
 export function cancelOrder(id: string): boolean {
   const index = orders.findIndex(order => order.id === id);
   if (index === -1) {
@@ -124,6 +149,7 @@ export function cancelOrder(id: string): boolean {
   return true;
 }
 
+/** Clears all orders from the in-memory store. Intended for use in tests. */
 export function resetOrders(): void {
   orders.splice(0, orders.length);
 }
