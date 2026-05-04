@@ -1,0 +1,29 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="lib/form">
+  <f:section title="GitHub Copilot Chat">
+    <f:entry title="OAuth App Client ID" field="clientId">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Copilot CLI Path" field="cliPath">
+      <f:textbox placeholder="copilot" />
+    </f:entry>
+    <f:entry title="Copilot CLI URL (remote)" field="cliUrl">
+      <f:textbox placeholder="http://copilot-cli:3003" />
+    </f:entry>
+    <f:entry title="Default Model" field="defaultModel">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Available Tools" field="availableTools">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="Request Timeout Seconds" field="requestTimeoutSeconds">
+      <f:number />
+    </f:entry>
+    <f:entry title="GitHub MCP Server URL" field="githubMcpUrl">
+      <f:textbox placeholder="https://api.githubcopilot.com/mcp/" />
+    </f:entry>
+    <f:entry title="GitHub MCP Token" field="githubMcpToken">
+      <f:password />
+    </f:entry>
+  </f:section>
+</j:jelly>

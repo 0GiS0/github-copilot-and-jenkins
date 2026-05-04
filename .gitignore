@@ -9,10 +9,12 @@ npm-debug.log*
 .env
 .env.local
 *.local
+.devcontainer/.env
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 *.swp
 *.swo
 
@@ -27,3 +29,4 @@ jenkins_home/
 # Build artifacts
 build/
 tmp/
+target/

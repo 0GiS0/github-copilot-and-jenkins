@@ -1,0 +1,169 @@
+:root {
+    color-scheme: light;
+    --bg: #f6f8fa;
+    --panel: #ffffff;
+    --text: #1f2328;
+    --muted: #656d76;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-soft: #ddf4ff;
+    --success: #1a7f37;
+    --warning: #9a6700;
+    --danger: #cf222e;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+.report-shell {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }
+.report-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 16px 42px rgba(31, 35, 40, .08);
+    overflow: hidden;
+}
+.report-header {
+    padding: 28px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #ffffff 0%, #f6f8fa 100%);
+}
+.report-header h1 {
+    margin: 0 0 10px;
+    font-size: 32px;
+    line-height: 1.2;
+    letter-spacing: 0;
+}
+.report-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: var(--muted);
+}
+.meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel);
+    padding: 4px 10px;
+    font-size: 13px;
+}
+.report-content { padding: 24px 32px 34px; }
+h1:first-child, p:nth-child(2), p:nth-child(3) { display: none; }
+.report-section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    margin: 16px 0;
+    overflow: hidden;
+}
+.report-section summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 15px 18px;
+    background: #f6f8fa;
+    color: var(--text);
+    font-size: 19px;
+    font-weight: 700;
+    user-select: none;
+}
+.report-section summary::before {
+    content: '\203A';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: var(--accent);
+    font-size: 22px;
+    line-height: 1;
+    transform: rotate(0deg);
+    transition: transform .12s ease;
+}
+.report-section[open] summary::before { transform: rotate(90deg); }
+.report-section summary::-webkit-details-marker { display: none; }
+.section-body { padding: 6px 18px 18px; }
+h2 {
+    margin: 30px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 22px;
+}
+h3 {
+    margin: 24px 0 10px;
+    color: var(--accent);
+    font-size: 18px;
+}
+h4 { margin: 18px 0 8px; font-size: 16px; }
+p { margin: 10px 0; }
+ul { margin: 10px 0 16px 22px; padding: 0; }
+li { margin: 6px 0; }
+strong { font-weight: 700; }
+code {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: #f6f8fa;
+    padding: 1px 5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .92em;
+}
+pre {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #f6f8fa;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: .92em;
+    line-height: 1.5;
+}
+pre code {
+    border: 0;
+    background: transparent;
+    padding: 0;
+}
+hr { border: 0; border-top: 1px solid var(--border); margin: 22px 0; }
+.table-wrap { overflow-x: auto; margin: 14px 0 20px; }
+table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+}
+th, td {
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+}
+th { background: #f6f8fa; font-weight: 700; }
+tr:last-child td { border-bottom: 0; }
+@media (max-width: 720px) {
+    .report-shell { padding: 16px; }
+    .report-header, .report-content { padding: 22px 18px; }
+    .report-header h1 { font-size: 26px; }
+    .report-section summary { font-size: 17px; padding: 13px 14px; }
+    .section-body { padding: 4px 14px 14px; }
+}

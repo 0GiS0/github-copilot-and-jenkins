@@ -25,6 +25,12 @@ credentials:
               id: "gh-token"
               secret: "${GH_TOKEN}"
               description: "GitHub Token for Copilot CLI"
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-token"
+              username: "0GiS0"
+              password: "${GH_TOKEN}"
+              description: "GitHub token for private repository checkout"
 
 unclassified:
   location:

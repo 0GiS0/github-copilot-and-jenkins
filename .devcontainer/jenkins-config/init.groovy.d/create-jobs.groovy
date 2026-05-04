@@ -1,6 +1,12 @@
 import jenkins.model.Jenkins
+import javaposse.jobdsl.dsl.DslScriptLoader
 import javaposse.jobdsl.plugin.*
 import hudson.model.*
+
+def repositoryUrl = 'https://github.com/0GiS0/github-copilot-and-jenkins.git'
+def gitCredentialsId = 'github-token'
+def repositoryOwner = '0GiS0'
+def repositoryName = 'github-copilot-and-jenkins'
 
 def jobDsl = """
 folder('copilot-demos') {
@@ -8,38 +14,80 @@ folder('copilot-demos') {
     description('Pipelines demonstrating GitHub Copilot CLI integration')
 }
 
-pipelineJob('copilot-demos/code-review') {
+multibranchPipelineJob('copilot-demos/code-review') {
     displayName('Code Review with Copilot')
-    description('Automated code review using GitHub Copilot CLI')
-    definition {
-        cpsScm {
-            scm {
-                git {
-                    remote {
-                        url('/workspace')
+    description('Automated Pull Request code review using GitHub Copilot CLI')
+    branchSources {
+        branchSource {
+            source {
+                github {
+                    id('copilot-demos-code-review')
+                    credentialsId('${gitCredentialsId}')
+                    repositoryUrl('${repositoryUrl}')
+                    configuredByUrl(false)
+                    repoOwner('${repositoryOwner}')
+                    repository('${repositoryName}')
+                    traits {
+                        gitHubPullRequestDiscovery {
+                            strategyId(1)
+                        }
                     }
-                    branches('*/main')
                 }
             }
+        }
+    }
+    factory {
+        workflowBranchProjectFactory {
             scriptPath('pipelines/code-review.jenkinsfile')
+        }
+    }
+    triggers {
+        periodicFolderTrigger {
+            interval('1m')
+        }
+    }
+    orphanedItemStrategy {
+        discardOldItems {
+            numToKeep(20)
         }
     }
 }
 
-pipelineJob('copilot-demos/docs-generator') {
+multibranchPipelineJob('copilot-demos/docs-generator') {
     displayName('Documentation Generator')
-    description('Generate documentation using GitHub Copilot CLI')
-    definition {
-        cpsScm {
-            scm {
-                git {
-                    remote {
-                        url('/workspace')
+    description('Generate and write back Pull Request documentation using GitHub Copilot CLI')
+    branchSources {
+        branchSource {
+            source {
+                github {
+                    id('copilot-demos-docs-generator')
+                    credentialsId('${gitCredentialsId}')
+                    repositoryUrl('${repositoryUrl}')
+                    configuredByUrl(false)
+                    repoOwner('${repositoryOwner}')
+                    repository('${repositoryName}')
+                    traits {
+                        gitHubPullRequestDiscovery {
+                            strategyId(1)
+                        }
                     }
-                    branches('*/main')
                 }
             }
+        }
+    }
+    factory {
+        workflowBranchProjectFactory {
             scriptPath('pipelines/docs-generator.jenkinsfile')
+        }
+    }
+    triggers {
+        periodicFolderTrigger {
+            interval('1m')
+        }
+    }
+    orphanedItemStrategy {
+        discardOldItems {
+            numToKeep(20)
         }
     }
 }
@@ -52,7 +100,8 @@ pipelineJob('copilot-demos/code-analysis') {
             scm {
                 git {
                     remote {
-                        url('/workspace')
+                        url('${repositoryUrl}')
+                        credentials('${gitCredentialsId}')
                     }
                     branches('*/main')
                 }
@@ -62,40 +111,31 @@ pipelineJob('copilot-demos/code-analysis') {
     }
 }
 
-pipelineJob('main-pipeline') {
-    displayName('Main Pipeline - All Demos')
-    description('Run all Copilot CLI demonstrations')
+pipelineJob('sample-app-ci') {
+    displayName('🧪 Sample App CI')
+    description('Run CI for the sample Node.js REST API')
     definition {
         cpsScm {
             scm {
                 git {
                     remote {
-                        url('/workspace')
+                        url('${repositoryUrl}')
+                        credentials('${gitCredentialsId}')
                     }
                     branches('*/main')
                 }
             }
-            scriptPath('Jenkinsfile')
+            scriptPath('src/Jenkinsfile')
         }
     }
 }
+
 """
 
 def jenkins = Jenkins.instance
 def workspace = new File(System.getProperty("java.io.tmpdir"), "jobdsl-workspace")
 workspace.mkdirs()
 
-def scriptFile = new File(workspace, "jobs.groovy")
-scriptFile.text = jobDsl
-
-def seedJob = jenkins.createProject(FreeStyleProject, "seed-job-init")
-seedJob.buildersList.add(new ExecuteDslScripts(
-    new ExecuteDslScripts.ScriptLocation(null, null, jobDsl),
-    false,
-    RemovedJobAction.DELETE,
-    RemovedViewAction.DELETE,
-    LookupStrategy.JENKINS_ROOT
-))
-
-def cause = new Cause.UserIdCause()
-seedJob.scheduleBuild(0, cause)
+def jobManagement = new JenkinsJobManagement(System.out, [:], workspace)
+new DslScriptLoader(jobManagement).runScript(jobDsl)
+jenkins.save()
