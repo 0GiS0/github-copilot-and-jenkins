@@ -46,7 +46,7 @@ multibranchPipelineJob('${codeReviewJobName}') {
     }
     triggers {
         periodicFolderTrigger {
-            interval('1h')
+            interval('1m')
         }
     }
     orphanedItemStrategy {
@@ -85,7 +85,7 @@ multibranchPipelineJob('${docsGeneratorJobName}') {
     }
     triggers {
         periodicFolderTrigger {
-            interval('1h')
+            interval('1m')
         }
     }
     orphanedItemStrategy {
