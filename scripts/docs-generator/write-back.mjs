@@ -32,7 +32,7 @@ runInherited('git', ['config', 'user.name', 'jenkins-copilot']);
 runInherited('git', ['config', 'user.email', 'jenkins-copilot@users.noreply.github.com']);
 runInherited('git', ['stash', 'push', '--include-untracked', '-m', 'docs-generator']);
 runInherited('git', ['fetch', 'origin', state.pr.headBranch]);
-runInherited('git', ['checkout', '-B', state.pr.headBranch, `origin/${state.pr.headBranch}`]);
+runInherited('git', ['checkout', '-B', state.pr.headBranch, 'FETCH_HEAD']);
 runInherited('git', ['stash', 'pop']);
 
 files = validateAllowedChanges(state);

@@ -1,77 +1,105 @@
-import { sum, average, formatDate, isValidEmail, generateRandomString, deepClone } from './utils';
+import { createServer, IncomingMessage, ServerResponse } from 'node:http';
+import { URL } from 'node:url';
+import {
+  cancelOrder,
+  createOrder,
+  findOrder,
+  listOrders,
+  listProducts,
+  OrderStatus,
+  updateOrderStatus
+} from './utils';
+
+const port = Number(process.env.PORT || 3000);
 
 /**
- * Demo application entry point
- * Showcases various utility functions
+ * Writes a JSON response with the given HTTP status code.
  */
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  createdAt: Date;
+function sendJson(response: ServerResponse, statusCode: number, payload: unknown): void {
+  response.writeHead(statusCode, { 'Content-Type': 'application/json' });
+  response.end(JSON.stringify(payload));
 }
 
-function createUser(id: number, name: string, email: string): User {
-  return {
-    id,
-    name,
-    email,
-    createdAt: new Date()
-  };
-}
+/**
+ * Reads the full request body and parses it as JSON.
+ * Returns an empty object when the body is absent.
+ */
+async function readJsonBody(request: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = [];
 
-function displayUserInfo(user: User): void {
-  console.log(`
-╔════════════════════════════════════════╗
-║           User Information             ║
-╠════════════════════════════════════════╣
-║ ID: ${user.id.toString().padEnd(34)}║
-║ Name: ${user.name.padEnd(32)}║
-║ Email: ${user.email.padEnd(31)}║
-║ Created: ${formatDate(user.createdAt).padEnd(29)}║
-╚════════════════════════════════════════╝
-  `);
-}
-
-function runDemo(): void {
-  console.log('🚀 GitHub Copilot CLI + Jenkins Demo Application\n');
-
-  // Demo: Math utilities
-  const numbers = [10, 20, 30, 40, 50];
-  console.log(`📊 Numbers: [${numbers.join(', ')}]`);
-  console.log(`   Sum: ${sum(numbers)}`);
-  console.log(`   Average: ${average(numbers)}\n`);
-
-  // Demo: Email validation
-  const emails = ['valid@example.com', 'invalid-email', 'another@test.org'];
-  console.log('📧 Email Validation:');
-  emails.forEach(email => {
-    const status = isValidEmail(email) ? '✅ Valid' : '❌ Invalid';
-    console.log(`   ${email}: ${status}`);
-  });
-  console.log();
-
-  // Demo: Random string generation
-  console.log('🎲 Random Strings:');
-  for (let i = 0; i < 3; i++) {
-    console.log(`   ${generateRandomString(16)}`);
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
-  console.log();
 
-  // Demo: User creation and display
-  const user = createUser(1, 'John Doe', 'john@example.com');
-  displayUserInfo(user);
-
-  // Demo: Deep clone
-  const clonedUser = deepClone(user);
-  clonedUser.name = 'Jane Doe';
-  console.log('🔄 Original user name:', user.name);
-  console.log('🔄 Cloned user name:', clonedUser.name);
-  console.log();
-
-  console.log('✨ Demo completed successfully!');
+  const rawBody = Buffer.concat(chunks).toString('utf8');
+  return rawBody ? JSON.parse(rawBody) : {};
 }
 
-// Run the demo
-runDemo();
+/**
+ * Routes an incoming HTTP request to the appropriate handler and writes the JSON response.
+ * Responds with 400 on any thrown error and 404 when no route matches.
+ */
+async function handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  const method = request.method || 'GET';
+  const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
+  const path = url.pathname;
+  const orderMatch = path.match(/^\/orders\/([^/]+)$/);
+  const statusMatch = path.match(/^\/orders\/([^/]+)\/status$/);
+
+  try {
+    if (method === 'GET' && path === '/health') {
+      sendJson(response, 200, { status: 'ok', uptime: process.uptime() });
+      return;
+    }
+
+    if (method === 'GET' && path === '/products') {
+      sendJson(response, 200, { products: listProducts() });
+      return;
+    }
+
+    if (method === 'GET' && path === '/orders') {
+      sendJson(response, 200, { orders: listOrders() });
+      return;
+    }
+
+    if (method === 'GET' && orderMatch) {
+      const order = findOrder(orderMatch[1]);
+      sendJson(response, order ? 200 : 404, order || { error: 'Order not found' });
+      return;
+    }
+
+    if (method === 'POST' && path === '/orders') {
+      const order = createOrder(await readJsonBody(request));
+      sendJson(response, 201, order);
+      return;
+    }
+
+    if (method === 'PATCH' && statusMatch) {
+      const body = await readJsonBody(request) as { status?: OrderStatus };
+      const order = updateOrderStatus(statusMatch[1], body.status || 'pending');
+      sendJson(response, order ? 200 : 404, order || { error: 'Order not found' });
+      return;
+    }
+
+    if (method === 'DELETE' && orderMatch) {
+      const deleted = cancelOrder(orderMatch[1]);
+      sendJson(response, deleted ? 200 : 404, deleted ? { deleted: true } : { error: 'Order not found' });
+      return;
+    }
+
+    sendJson(response, 404, { error: 'Route not found' });
+  } catch (error) {
+    sendJson(response, 400, { error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+}
+
+/** HTTP server instance for the Order API. */
+export const server = createServer((request, response) => {
+  void handleRequest(request, response);
+});
+
+if (require.main === module) {
+  server.listen(port, () => {
+    console.log(`Order API listening on port ${port}`);
+  });
+}

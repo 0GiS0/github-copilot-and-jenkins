@@ -1,97 +1,155 @@
-/**
- * Utility functions for the demo application
- * These functions demonstrate various patterns that can be reviewed by Copilot
- */
+/** Lifecycle states an order can occupy. */
+export type OrderStatus = 'pending' | 'paid' | 'packed' | 'shipped' | 'cancelled';
 
-/**
- * Calculate the sum of an array of numbers
- */
-export function sum(numbers: number[]): number {
-  return numbers.reduce((acc, num) => acc + num, 0);
+/** A product available for purchase. */
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+}
+
+/** A single line item as supplied by the caller when creating an order. */
+export interface OrderItemInput {
+  productId: string;
+  quantity: number;
+}
+
+/** Payload required to create a new order. */
+export interface CreateOrderInput {
+  customerName: string;
+  customerEmail: string;
+  items: OrderItemInput[];
+}
+
+/** A resolved line item stored on an order. */
+export interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+/** A complete order record. */
+export interface Order {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  items: OrderItem[];
+  total: number;
+  status: OrderStatus;
+  createdAt: string;
+}
+
+const products: Product[] = [
+  { id: 'coffee-beans', name: 'Coffee Beans', price: 14.5, stock: 40 },
+  { id: 'travel-mug', name: 'Travel Mug', price: 22, stock: 18 },
+  { id: 'brew-scale', name: 'Brew Scale', price: 38.75, stock: 12 }
+];
+
+const orders: Order[] = [];
+
+/** Returns a shallow copy of every available product. */
+export function listProducts(): Product[] {
+  return products.map(product => ({ ...product }));
+}
+
+/** Returns a deep copy of all orders. */
+export function listOrders(): Order[] {
+  return orders.map(order => ({ ...order, items: order.items.map(item => ({ ...item })) }));
 }
 
 /**
- * Calculate the average of an array of numbers
+ * Finds an order by its ID.
+ * @returns A deep copy of the order, or `undefined` if not found.
  */
-export function average(numbers: number[]): number {
-  if (numbers.length === 0) return 0;
-  return sum(numbers) / numbers.length;
+export function findOrder(id: string): Order | undefined {
+  const order = orders.find(candidate => candidate.id === id);
+  return order ? { ...order, items: order.items.map(item => ({ ...item })) } : undefined;
 }
 
 /**
- * Format a date to a readable string
+ * Creates and persists a new order from an untyped request payload.
+ * @throws {Error} If required fields are missing, the email is invalid, no items are provided, or a product ID is unknown.
  */
-export function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
+export function createOrder(payload: unknown): Order {
+  const input = payload as CreateOrderInput;
 
-/**
- * Validate an email address
- */
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-/**
- * Generate a random string of specified length
- */
-export function generateRandomString(length: number): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  if (!input.customerName || !input.customerEmail || !input.customerEmail.includes('@')) {
+    throw new Error('A customer name and valid email are required.');
   }
-  return result;
-}
 
-/**
- * Debounce a function
- */
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout | null = null;
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    throw new Error('At least one order item is required.');
+  }
 
-  return (...args: Parameters<T>) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+  const items = input.items.map(item => {
+    const product = products.find(candidate => candidate.id === item.productId);
+    if (!product) {
+      throw new Error(`Unknown product: ${item.productId}`);
     }
-    timeoutId = setTimeout(() => {
-      func(...args);
-    }, wait);
+
+    const quantity = Number(item.quantity) || 1;
+    return {
+      productId: product.id,
+      name: product.name,
+      quantity,
+      unitPrice: product.price,
+      subtotal: product.price * quantity
+    };
+  });
+
+  const order: Order = {
+    id: Math.random().toString(36).slice(2),
+    customerName: input.customerName.trim(),
+    customerEmail: input.customerEmail.trim().toLowerCase(),
+    items,
+    total: items.reduce((sum, item) => sum + item.subtotal, 0),
+    status: 'pending',
+    createdAt: new Date().toISOString()
   };
+
+  orders.push(order);
+  return { ...order, items: order.items.map(item => ({ ...item })) };
 }
 
 /**
- * Deep clone an object
+ * Updates the status of an existing order.
+ * @returns A deep copy of the updated order, or `undefined` if the order was not found.
+ * @throws {Error} If `status` is not a valid `OrderStatus` value.
  */
-export function deepClone<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj));
-}
+export function updateOrderStatus(id: string, status: OrderStatus): Order | undefined {
+  const allowedStatuses: OrderStatus[] = ['pending', 'paid', 'packed', 'shipped', 'cancelled'];
+  const order = orders.find(candidate => candidate.id === id);
 
-/**
- * Retry an async function with exponential backoff
- */
-export async function retry<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  baseDelay: number = 1000
-): Promise<T> {
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-      if (attempt < maxRetries - 1) {
-        const delay = baseDelay * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
+  if (!order) {
+    return undefined;
   }
 
-  throw lastError;
+  if (!allowedStatuses.includes(status)) {
+    throw new Error(`Unsupported order status: ${status}`);
+  }
+
+  order.status = status;
+  return { ...order, items: order.items.map(item => ({ ...item })) };
+}
+
+/**
+ * Removes an order from the store.
+ * @returns `true` if the order was found and deleted, `false` otherwise.
+ */
+export function cancelOrder(id: string): boolean {
+  const index = orders.findIndex(order => order.id === id);
+  if (index === -1) {
+    return false;
+  }
+
+  orders.splice(index, 1);
+  return true;
+}
+
+/** Clears all orders from the in-memory store. Intended for use in tests. */
+export function resetOrders(): void {
+  orders.splice(0, orders.length);
 }

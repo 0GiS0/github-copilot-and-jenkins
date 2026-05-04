@@ -8,6 +8,7 @@ def gitCredentialsId = 'github-token'
 def repositoryOwner = '0GiS0'
 def repositoryName = 'github-copilot-and-jenkins'
 def codeReviewJobName = 'copilot-demos/code-review'
+def docsGeneratorJobName = 'copilot-demos/docs-generator'
 
 def jobDsl = """
 folder('copilot-demos') {
@@ -54,21 +55,41 @@ multibranchPipelineJob('${codeReviewJobName}') {
     }
 }
 
-pipelineJob('copilot-demos/docs-generator') {
+multibranchPipelineJob('${docsGeneratorJobName}') {
     displayName('Documentation Generator')
-    description('Generate documentation using GitHub Copilot CLI')
-    definition {
-        cpsScm {
-            scm {
-                git {
-                    remote {
-                        url('${repositoryUrl}')
-                        credentials('${gitCredentialsId}')
+    description('Generate and write back Pull Request documentation using GitHub Copilot CLI')
+    branchSources {
+        branchSource {
+            source {
+                github {
+                    id('copilot-demos-docs-generator')
+                    credentialsId('${gitCredentialsId}')
+                    repositoryUrl('${repositoryUrl}')
+                    configuredByUrl(false)
+                    repoOwner('${repositoryOwner}')
+                    repository('${repositoryName}')
+                    traits {
+                        gitHubPullRequestDiscovery {
+                            strategyId(1)
+                        }
                     }
-                    branches('*/main')
                 }
             }
+        }
+    }
+    factory {
+        workflowBranchProjectFactory {
             scriptPath('pipelines/docs-generator.jenkinsfile')
+        }
+    }
+    triggers {
+        periodicFolderTrigger {
+            interval('1h')
+        }
+    }
+    orphanedItemStrategy {
+        discardOldItems {
+            numToKeep(20)
         }
     }
 }
@@ -98,6 +119,10 @@ def jenkins = Jenkins.instance
 def existingCodeReviewJob = jenkins.getItemByFullName(codeReviewJobName)
 if (existingCodeReviewJob && existingCodeReviewJob.class.name != 'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject') {
     existingCodeReviewJob.delete()
+}
+def existingDocsGeneratorJob = jenkins.getItemByFullName(docsGeneratorJobName)
+if (existingDocsGeneratorJob && existingDocsGeneratorJob.class.name != 'org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject') {
+    existingDocsGeneratorJob.delete()
 }
 
 def workspace = new File(System.getProperty("java.io.tmpdir"), "jobdsl-workspace")

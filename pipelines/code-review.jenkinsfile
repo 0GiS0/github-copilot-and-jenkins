@@ -40,7 +40,9 @@ pipeline {
             steps {
                 echo 'Fetching Pull Request target branch...'
                 sh '''
-                    git fetch --no-tags origin "+refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
+                    set +x
+                    AUTHENTICATED_REMOTE=$(git config --get remote.origin.url | sed "s#https://github.com/#https://x-access-token:${GH_TOKEN}@github.com/#")
+                    git fetch --no-tags "$AUTHENTICATED_REMOTE" "+refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
                 '''
             }
         }
