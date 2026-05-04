@@ -40,7 +40,8 @@ pipeline {
             steps {
                 echo 'Fetching Pull Request target branch...'
                 sh '''
-                    git fetch --no-tags origin "+refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
+                    set +x
+                    git -c "http.extraHeader=AUTHORIZATION: bearer ${GH_TOKEN}" fetch --no-tags origin "+refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
                 '''
             }
         }
