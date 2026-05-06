@@ -1,4 +1,6 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { URL } from 'node:url';
 import {
   cancelOrder,
@@ -11,6 +13,13 @@ import {
 } from './utils';
 
 const port = Number(process.env.PORT || 3000);
+const frontendRoot = join(__dirname, 'frontend');
+const frontendAssets: Record<string, { fileName: string; contentType: string }> = {
+  '/': { fileName: 'index.html', contentType: 'text/html; charset=utf-8' },
+  '/index.html': { fileName: 'index.html', contentType: 'text/html; charset=utf-8' },
+  '/app.js': { fileName: 'app.js', contentType: 'text/javascript; charset=utf-8' },
+  '/styles.css': { fileName: 'styles.css', contentType: 'text/css; charset=utf-8' }
+};
 
 /**
  * Writes a JSON response with the given HTTP status code.
@@ -18,6 +27,23 @@ const port = Number(process.env.PORT || 3000);
 function sendJson(response: ServerResponse, statusCode: number, payload: unknown): void {
   response.writeHead(statusCode, { 'Content-Type': 'application/json' });
   response.end(JSON.stringify(payload));
+}
+
+/**
+ * Serves a static frontend asset for the given path.
+ * Returns `true` if the asset was found and written, `false` otherwise.
+ */
+async function sendFrontendAsset(path: string, response: ServerResponse): Promise<boolean> {
+  const asset = frontendAssets[path];
+
+  if (!asset) {
+    return false;
+  }
+
+  const content = await readFile(join(frontendRoot, asset.fileName), 'utf8');
+  response.writeHead(200, { 'Content-Type': asset.contentType });
+  response.end(content);
+  return true;
 }
 
 /**
@@ -47,6 +73,10 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse)
   const statusMatch = path.match(/^\/orders\/([^/]+)\/status$/);
 
   try {
+    if (method === 'GET' && await sendFrontendAsset(path, response)) {
+      return;
+    }
+
     if (method === 'GET' && path === '/health') {
       sendJson(response, 200, { status: 'ok', uptime: process.uptime() });
       return;

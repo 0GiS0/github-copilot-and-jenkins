@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Order Desk</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Order API</p>
+        <h1>Panel de pedidos</h1>
+      </div>
+      <div class="status-pill" id="apiStatus">Comprobando API</div>
+    </header>
+
+    <main class="app-shell">
+      <section class="panel catalog-panel" aria-labelledby="catalogTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Catalogo</p>
+            <h2 id="catalogTitle">Productos</h2>
+          </div>
+          <button class="icon-button" type="button" id="refreshButton" aria-label="Actualizar datos" title="Actualizar datos">&#8635;</button>
+        </div>
+        <div class="product-grid" id="productList"></div>
+      </section>
+
+      <section class="panel order-form-panel" aria-labelledby="formTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Nuevo pedido</p>
+            <h2 id="formTitle">Cliente y carrito</h2>
+          </div>
+        </div>
+
+        <form id="orderForm" class="order-form">
+          <label>
+            Nombre
+            <input id="customerName" name="customerName" type="text" autocomplete="name" required>
+          </label>
+          <label>
+            Email
+            <input id="customerEmail" name="customerEmail" type="email" autocomplete="email" required>
+          </label>
+
+          <div class="cart-box">
+            <div class="cart-heading">
+              <span>Carrito</span>
+              <strong id="cartTotal">$0.00</strong>
+            </div>
+            <div class="cart-items" id="cartItems"></div>
+          </div>
+
+          <button class="primary-button" type="submit">Crear pedido</button>
+        </form>
+      </section>
+
+      <section class="panel orders-panel" aria-labelledby="ordersTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Seguimiento</p>
+            <h2 id="ordersTitle">Pedidos</h2>
+          </div>
+        </div>
+        <div class="orders-list" id="ordersList"></div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
