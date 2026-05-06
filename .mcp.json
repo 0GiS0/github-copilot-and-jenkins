@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "jenkins": {
+      "type": "http",
+      "url": "http://jenkins:8080/mcp-server/stateless",
+      "headers": {
+        "Authorization": "Basic ${input:jenkins-basic-auth}"
+      }
+    }
+  }
+}
