@@ -11,13 +11,11 @@
 
 ---
 
-¡Hola! En este repositorio encontrarás un entorno completo para integrar GitHub Copilot en Jenkins con un plugin Java, canalizaciones de ejemplo integradas con GitHub Copilot CLI y un contenedor de desarrollo listo para usar. También incluye una aplicación TypeScript para pruebas y demostraciones de automatización con IA.
+¡Hola developer 👋🏻! En este repositorio encontrarás un entorno completo para integrar GitHub Copilot en Jenkins con un plugin Java, canalizaciones de ejemplo integradas con GitHub Copilot CLI y un contenedor de desarrollo listo para usar. También incluye una aplicación TypeScript para pruebas y demostraciones de automatización con IA.
 
-<a href="https://youtu.be/TU_CODIGO_AQUI">
-  <img src="https://img.youtube.com/vi/TU_CODIGO_AQUI/maxresdefault.jpg" alt="Formas de integrar GitHub Copilot en Jenkins" width="100%" />
+<a href="https://youtu.be/OtX-rLyQ85I">
+  <img src="https://img.youtube.com/vi/OtX-rLyQ85I/maxresdefault.jpg" alt="Formas de integrar GitHub Copilot en Jenkins" width="100%" />
 </a>
-
-> ⚠️ Nota: El vídeo aún no está publicado. Cuando tengas el código final, reemplaza `TU_CODIGO_AQUI` en el enlace y en la miniatura.
 
 ---
 
