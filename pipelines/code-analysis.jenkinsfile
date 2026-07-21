@@ -10,7 +10,7 @@ pipeline {
     environment {
         GH_TOKEN = credentials('gh-token')
         COPILOT_GITHUB_TOKEN = credentials('gh-token')
-        COPILOT_MODEL = 'claude-sonnet-4.6'
+        COPILOT_MODEL = 'Auto'
         PATH = "${env.HOME}/.local/bin:/usr/local/bin:${env.PATH}"
     }
 
