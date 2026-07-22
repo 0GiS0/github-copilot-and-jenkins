@@ -37,16 +37,19 @@ export function runCopilot(prompt, outputPath) {
         prompt
     ];
 
-    if (process.env.COPILOT_MODEL) {
-        args.unshift('--model', process.env.COPILOT_MODEL);
+    const model = process.env.COPILOT_MODEL?.trim();
+    if (model) {
+        args.unshift('--model', model);
     }
 
-    const result = spawnSync('copilot', args, {
-        encoding: 'utf8',
-        env: process.env,
-        maxBuffer: 10 * 1024 * 1024
-    });
-    const output = `${result.stdout || ''}${result.stderr || ''}${result.error ? `\n${result.error.stack || result.error.message}\n` : ''}`;
+    let result = runCopilotCommand(args);
+    let output = copilotOutput(result);
+
+    if (model && isUnavailableModelError(output)) {
+        result = runCopilotCommand(args.slice(2));
+        output = copilotOutput(result);
+    }
+
     writeFileSync(outputPath, output);
     if (result.error) {
         return 127;
@@ -55,4 +58,20 @@ export function runCopilot(prompt, outputPath) {
         return 1;
     }
     return result.status ?? 1;
+}
+
+function runCopilotCommand(args) {
+    return spawnSync('copilot', args, {
+        encoding: 'utf8',
+        env: process.env,
+        maxBuffer: 10 * 1024 * 1024
+    });
+}
+
+function copilotOutput(result) {
+    return `${result.stdout || ''}${result.stderr || ''}${result.error ? `\n${result.error.stack || result.error.message}\n` : ''}`;
+}
+
+function isUnavailableModelError(output) {
+    return /Model\s+["'][^"']+["']\s+from\s+--model\s+flag\s+is\s+not\s+available\b/i.test(output);
 }
